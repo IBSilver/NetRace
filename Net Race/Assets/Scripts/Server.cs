@@ -7,51 +7,70 @@ using System.Threading;
 public class Server : MonoBehaviour
 {
     Socket socket;
+    public GameObject playerPrefab;
+    private IPEndPoint serverEndPoint;
 
     void Start()
     {
-        StartServer();
-    }
-
-    public void StartServer()
-    {
-        Debug.Log("Starting UDP Server...");
-
-        IPEndPoint ipep = new IPEndPoint(IPAddress.Any, 9050);
+        serverEndPoint = new IPEndPoint(IPAddress.Any, 9050);
         socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-        socket.Bind(ipep);
+        socket.Bind(serverEndPoint);
 
         Thread receiveThread = new Thread(Receive);
-        receiveThread.IsBackground = true;
         receiveThread.Start();
     }
 
     void Receive()
     {
         byte[] data = new byte[1024];
-        Debug.Log("Waiting for client...");
-
         IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
-        EndPoint remote = (EndPoint)sender;
+        EndPoint remoteEndPoint = (EndPoint)sender;
 
         while (true)
         {
-            int recv = socket.ReceiveFrom(data, ref remote);
-            Debug.Log($"Message received from {remote}: {Encoding.ASCII.GetString(data, 0, recv)}");
+            try
+            {
+                int recv = socket.ReceiveFrom(data, ref remoteEndPoint);
+                string message = Encoding.ASCII.GetString(data, 0, recv);
 
-            // Respond to the client
-            Thread sendThread = new Thread(() => Send(remote));
-            sendThread.IsBackground = true;
-            sendThread.Start();
+                Debug.Log($"Received message: {message} from {remoteEndPoint}");
+
+                if (message == "Ping")
+                {
+                    // Respond with Pong when ping is received
+                    byte[] response = Encoding.ASCII.GetBytes("Pong");
+                    socket.SendTo(response, remoteEndPoint);
+                    Debug.Log("Sent Pong to client.");
+                }
+                else if (message == "Spawn")
+                {
+                    byte[] response = Encoding.ASCII.GetBytes("SpawnReceived");
+                    socket.SendTo(response, remoteEndPoint);
+                    // Call the method to spawn the player
+                    SpawnPlayer();
+                }
+            }
+            catch (SocketException ex)
+            {
+                Debug.LogError($"Error receiving data: {ex.Message}");
+            }
         }
     }
 
-    void Send(EndPoint remote)
+    void SpawnPlayer()
     {
-        string message = "Ping";
-        byte[] data = Encoding.ASCII.GetBytes(message);
-        socket.SendTo(data, remote);
-        Debug.Log($"Sent 'Ping' to {remote}");
+        if (playerPrefab != null)
+        {
+            Vector3 spawnPosition = Vector3.zero;
+            Quaternion spawnRotation = Quaternion.identity;
+
+            Instantiate(playerPrefab, spawnPosition, spawnRotation);
+
+            Debug.Log("Player spawned on the server.");
+        }
+        else
+        {
+            Debug.LogError("Player prefab is not assigned!");
+        }
     }
 }
-
