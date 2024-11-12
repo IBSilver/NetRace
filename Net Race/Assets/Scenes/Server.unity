@@ -151,7 +151,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 477f73715ca102241b4f7567e9297694, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerPrefab: {fileID: 427103950114659140, guid: be946ca95fece5b4593768c5adc044e3, type: 3}
+  playerPrefab: {fileID: 7250511751967764090, guid: 2443cdd96efe7bf49935d200671add45, type: 3}
   prefabMap1: {fileID: 6609255282665373359, guid: 8377cb1193a58b742be81fe8eb64e7ce, type: 3}
   prefabMap2: {fileID: 5893006375727437392, guid: 816d5e85ef99f3644813937df0c0375b, type: 3}
 --- !u!4 &260015299
