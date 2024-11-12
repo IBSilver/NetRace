@@ -12,8 +12,11 @@ public class Client : MonoBehaviour
     private bool mapLoaded = false;
     private bool spawnOnMainThread = false;
 
+    private int? mapToLoad = null; // This flag will store which map to load on the main thread
+
     public GameObject prefab;
     public GameObject prefabMap1;
+    public GameObject prefabMap2;
 
     void Start()
     {
@@ -24,8 +27,8 @@ public class Client : MonoBehaviour
         Thread receiveThread = new Thread(Receive);
         receiveThread.Start();
 
-        // Initially, do not ping the server; only check once the connection is confirmed and start checking for server every second
         InvokeRepeating(nameof(CheckForServer), 1, 1);
+        InvokeRepeating(nameof(SendMapRequest), 1, 5);
     }
 
     void Update()
@@ -35,18 +38,11 @@ public class Client : MonoBehaviour
             SendSpawnRequest();
         }
 
-        if (serverConnected && !mapLoaded)
-        {
-            SendMapRequest();
-        }
-
-        // Spawn the prefab if we received the "Spawn Cube" command from the server
         if (spawnOnMainThread)
         {
             if (prefab != null)
             {
-                Instantiate(prefab, Vector3.zero, Quaternion.identity);
-                // Reset the flag to prevent multiple instantiations
+                Instantiate(prefab, new Vector3(0, 1, 0), Quaternion.identity);
                 spawnOnMainThread = false;
             }
             else
@@ -54,16 +50,24 @@ public class Client : MonoBehaviour
                 Debug.LogError("Prefab is not assigned!");
             }
         }
+
+        // Check if a map needs to be loaded
+        if (mapToLoad.HasValue)
+        {
+            InstantiateMap(mapToLoad.Value);
+            mapLoaded = true;
+            mapToLoad = null; // Reset after loading
+        }
     }
 
     void SendMapRequest()
     {
+        if (mapLoaded || !serverConnected) return;
+
         try
         {
             string message = "MapRequest";
             byte[] data = Encoding.ASCII.GetBytes(message);
-
-            // Send the spawn request to the server
             socket.SendTo(data, serverEndpoint);
             Debug.Log("Map request sent to server");
         }
@@ -72,14 +76,13 @@ public class Client : MonoBehaviour
             Debug.LogError($"SocketException on Send: {ex.Message}");
         }
     }
+
     void SendSpawnRequest()
     {
         try
         {
             string message = "Spawn";
             byte[] data = Encoding.ASCII.GetBytes(message);
-
-            // Send the spawn request to the server
             socket.SendTo(data, serverEndpoint);
             Debug.Log("Spawn request sent to server");
         }
@@ -103,12 +106,20 @@ public class Client : MonoBehaviour
 
                     if (recv > 0)
                     {
-                        string message = Encoding.ASCII.GetString(data, 0, recv);
+                        string message = Encoding.ASCII.GetString(data, 0, recv).Trim();
+                        Debug.Log($"Received message: {message}");
+
                         if (message == "SpawnReceived")
                         {
-                            Debug.Log("Received spawn response from server");
-                            // Trigger prefab spawning
                             spawnOnMainThread = true;
+                        }
+                        else if (message == "Lobby")
+                        {
+                            mapToLoad = 0;
+                        }
+                        else if (message == "FirstMap")
+                        {
+                            mapToLoad = 1;
                         }
                     }
                 }
@@ -126,33 +137,26 @@ public class Client : MonoBehaviour
             }
             else
             {
-                // Skip the receive if not connected to the server and wait a bit before checking again
                 Thread.Sleep(100);
             }
         }
     }
 
-    // Function to check if the server is reachable
     void CheckForServer()
     {
         try
         {
-            // Send a ping to the server
             if (!serverConnected)
             {
                 string message = "Ping";
                 byte[] data = Encoding.ASCII.GetBytes(message);
-
                 socket.SendTo(data, serverEndpoint);
                 Debug.Log("Ping sent to server");
-
-                // Wait for server response
                 ReceiveResponse();
             }
         }
         catch (SocketException ex)
         {
-            // Catch socket errors when server is unavailable
             if (ex.SocketErrorCode != SocketError.HostUnreachable)
             {
                 Debug.LogWarning($"Error pinging server: {ex.Message}");
@@ -166,33 +170,17 @@ public class Client : MonoBehaviour
         try
         {
             int recv = socket.Receive(data);
-            string response = Encoding.ASCII.GetString(data, 0, recv);
+            string response = Encoding.ASCII.GetString(data, 0, recv).Trim();
+            Debug.Log("Response received: " + response);
+
             if (response == "Pong")
             {
                 serverConnected = true;
                 Debug.Log("Server connected: Pong received");
             }
-            else if (response == "SpawnReceived")
-            {
-                Debug.Log("Server acknowledged spawn request");
-            }
-            else
-            {
-                if (response == "0")
-                {
-                    InstantiateMap(0);
-                    mapLoaded = true;
-                }
-                else if (response == "1")
-                {
-                    InstantiateMap(1);
-                    mapLoaded = true;
-                }
-            }
         }
         catch (SocketException ex)
         {
-            // If we get an error or no response, keep trying
             Debug.LogWarning($"Response not received: {ex.Message}");
         }
     }
@@ -202,12 +190,21 @@ public class Client : MonoBehaviour
         switch (mapId)
         {
             case 0:
-                //DO
+                Instantiate(prefabMap1);
+                if (prefabMap1 != null)
+                {
+                    Destroy(prefabMap2);
+                }
                 break;
             case 1:
-                //DO
+                Instantiate(prefabMap2);
+                if (prefabMap2 != null)
+                {
+                    Destroy(prefabMap2);
+                }
                 break;
         }
     }
 }
+
 

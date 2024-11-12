@@ -9,12 +9,14 @@ public class Server : MonoBehaviour
     Socket socket;
     public GameObject playerPrefab;
     private IPEndPoint serverEndPoint;
-    private int map;
+    private string map;
+
+    public GameObject prefabMap1;
+    public GameObject prefabMap2;
 
     void Start()
     {
-        //Map = 0 is the lobby, 1 is the first map and so on
-        map = 0;
+        map = "Lobby";
         serverEndPoint = new IPEndPoint(IPAddress.Any, 9050);
         socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         socket.Bind(serverEndPoint);
@@ -47,8 +49,9 @@ public class Server : MonoBehaviour
                 }
                 else if (message == "MapRequest")
                 {
-                    byte[] response = Encoding.ASCII.GetBytes(map.ToString());
+                    byte[] response = Encoding.ASCII.GetBytes(map);
                     socket.SendTo(response, remoteEndPoint);
+                    Debug.Log($"Sent map: {map}");
                 }
                 else if (message == "Spawn")
                 {
@@ -69,7 +72,7 @@ public class Server : MonoBehaviour
     {
         if (playerPrefab != null)
         {
-            Vector3 spawnPosition = Vector3.zero;
+            Vector3 spawnPosition = new Vector3(0, 1, 0);
             Quaternion spawnRotation = Quaternion.identity;
 
             Instantiate(playerPrefab, spawnPosition, spawnRotation);
