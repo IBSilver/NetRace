@@ -9,9 +9,11 @@ public class Client : MonoBehaviour
     Socket socket;
     IPEndPoint serverEndpoint;
     private bool serverConnected = false;
+    private bool mapLoaded = false;
     private bool spawnOnMainThread = false;
 
-    public GameObject prefab; 
+    public GameObject prefab;
+    public GameObject prefabMap1;
 
     void Start()
     {
@@ -28,9 +30,14 @@ public class Client : MonoBehaviour
 
     void Update()
     {
-        if (serverConnected && Input.GetKeyDown(KeyCode.E))
+        if (serverConnected && Input.GetKeyDown(KeyCode.E) && mapLoaded)
         {
             SendSpawnRequest();
+        }
+
+        if (serverConnected && !mapLoaded)
+        {
+            SendMapRequest();
         }
 
         // Spawn the prefab if we received the "Spawn Cube" command from the server
@@ -49,6 +56,22 @@ public class Client : MonoBehaviour
         }
     }
 
+    void SendMapRequest()
+    {
+        try
+        {
+            string message = "MapRequest";
+            byte[] data = Encoding.ASCII.GetBytes(message);
+
+            // Send the spawn request to the server
+            socket.SendTo(data, serverEndpoint);
+            Debug.Log("Map request sent to server");
+        }
+        catch (SocketException ex)
+        {
+            Debug.LogError($"SocketException on Send: {ex.Message}");
+        }
+    }
     void SendSpawnRequest()
     {
         try
@@ -153,11 +176,37 @@ public class Client : MonoBehaviour
             {
                 Debug.Log("Server acknowledged spawn request");
             }
+            else
+            {
+                if (response == "0")
+                {
+                    InstantiateMap(0);
+                    mapLoaded = true;
+                }
+                else if (response == "1")
+                {
+                    InstantiateMap(1);
+                    mapLoaded = true;
+                }
+            }
         }
         catch (SocketException ex)
         {
             // If we get an error or no response, keep trying
             Debug.LogWarning($"Response not received: {ex.Message}");
+        }
+    }
+
+    void InstantiateMap(int mapId)
+    {
+        switch (mapId)
+        {
+            case 0:
+                //DO
+                break;
+            case 1:
+                //DO
+                break;
         }
     }
 }

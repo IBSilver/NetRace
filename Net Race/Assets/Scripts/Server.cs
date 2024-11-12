@@ -9,9 +9,12 @@ public class Server : MonoBehaviour
     Socket socket;
     public GameObject playerPrefab;
     private IPEndPoint serverEndPoint;
+    private int map;
 
     void Start()
     {
+        //Map = 0 is the lobby, 1 is the first map and so on
+        map = 0;
         serverEndPoint = new IPEndPoint(IPAddress.Any, 9050);
         socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         socket.Bind(serverEndPoint);
@@ -41,6 +44,11 @@ public class Server : MonoBehaviour
                     byte[] response = Encoding.ASCII.GetBytes("Pong");
                     socket.SendTo(response, remoteEndPoint);
                     Debug.Log("Sent Pong to client.");
+                }
+                else if (message == "MapRequest")
+                {
+                    byte[] response = Encoding.ASCII.GetBytes(map.ToString());
+                    socket.SendTo(response, remoteEndPoint);
                 }
                 else if (message == "Spawn")
                 {
