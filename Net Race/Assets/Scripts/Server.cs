@@ -14,6 +14,8 @@ public class Server : MonoBehaviour
     public GameObject prefabMap1;
     public GameObject prefabMap2;
 
+    private GameObject currentPlayer; // To store the player instance
+
     void Start()
     {
         map = "Lobby";
@@ -60,6 +62,11 @@ public class Server : MonoBehaviour
                     // Call the method to spawn the player
                     SpawnPlayer();
                 }
+                else if (message.StartsWith("Position:"))
+                {
+                    // Process the position and rotation update
+                    HandlePositionAndRotationUpdate(message);
+                }
             }
             catch (SocketException ex)
             {
@@ -70,18 +77,74 @@ public class Server : MonoBehaviour
 
     void SpawnPlayer()
     {
-        if (playerPrefab != null)
+        if (playerPrefab != null && currentPlayer == null) // Ensure only one player is spawned
         {
             Vector3 spawnPosition = new Vector3(0, 1, 0);
             Quaternion spawnRotation = Quaternion.identity;
 
-            Instantiate(playerPrefab, spawnPosition, spawnRotation);
+            currentPlayer = Instantiate(playerPrefab, spawnPosition, spawnRotation);
 
             Debug.Log("Player spawned on the server.");
+        }
+        else if (currentPlayer != null)
+        {
+            Debug.LogWarning("Player already spawned.");
         }
         else
         {
             Debug.LogError("Player prefab is not assigned!");
+        }
+    }
+
+    void HandlePositionAndRotationUpdate(string message)
+    {
+        string[] parts = message.Split(' ');
+        if (parts.Length >= 2)
+        {
+            string positionString = parts[0].Replace("Position:", "");
+            string[] positionValues = positionString.Split(',');
+
+            if (positionValues.Length == 3)
+            {
+                float x = float.Parse(positionValues[0]);
+                float y = float.Parse(positionValues[1]);
+                float z = float.Parse(positionValues[2]);
+                Vector3 position = new Vector3(x, y, z);
+
+                string rotationString = parts[1].Replace("Rotation:", "");
+                string[] rotationValues = rotationString.Split(',');
+
+                if (rotationValues.Length == 3)
+                {
+                    float rotX = float.Parse(rotationValues[0]);
+                    float rotY = float.Parse(rotationValues[1]);
+                    float rotZ = float.Parse(rotationValues[2]);
+                    Quaternion rotation = Quaternion.Euler(rotX, rotY, rotZ);
+
+                    if (currentPlayer != null)
+                    {
+                        currentPlayer.transform.position = position;
+                        currentPlayer.transform.rotation = rotation;
+                        Debug.Log($"Updated player position to: {position} and rotation to: {rotation}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("No player instantiated yet.");
+                    }
+                }
+                else
+                {
+                    Debug.LogError("Invalid rotation data.");
+                }
+            }
+            else
+            {
+                Debug.LogError("Invalid position data.");
+            }
+        }
+        else
+        {
+            Debug.LogError("Invalid message format for position and rotation.");
         }
     }
 }

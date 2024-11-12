@@ -30,6 +30,7 @@ public class Client : MonoBehaviour
 
         InvokeRepeating(nameof(CheckForServer), 1, 1);
         InvokeRepeating(nameof(SendMapRequest), 1, 5);
+        InvokeRepeating(nameof(SendPositionAndRotation), 1, 1);
     }
 
     void Update()
@@ -142,6 +143,27 @@ public class Client : MonoBehaviour
                 Thread.Sleep(100);
             }
         }
+    }
+
+    void SendPositionAndRotation()
+    {
+        GameObject player = prefab.transform.Find("PlayerGO")?.gameObject;
+
+        if (player == null)
+        {
+            Debug.LogError("Prefab is null, cannot send position and rotation.");
+            return;
+        }
+
+        Vector3 position = player.transform.position;
+        Quaternion rotation = player.transform.rotation;
+
+        string message = $"Position:{position.x},{position.y},{position.z} Rotation:{rotation.eulerAngles.x},{rotation.eulerAngles.y},{rotation.eulerAngles.z}";
+
+        // Send the message to the server
+        byte[] data = Encoding.ASCII.GetBytes(message);
+        socket.SendTo(data, serverEndpoint);
+        Debug.Log($"Sent position and rotation: {message}");
     }
 
     void CheckForServer()
