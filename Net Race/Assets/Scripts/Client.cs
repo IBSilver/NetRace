@@ -11,6 +11,7 @@ public class Client : MonoBehaviour
     private bool serverConnected = false;
     private bool mapLoaded = false;
     private bool spawnOnMainThread = false;
+    private bool auxSpawn = false;
 
     private int? mapToLoad = null; // This flag will store which map to load on the main thread
 
@@ -33,19 +34,20 @@ public class Client : MonoBehaviour
 
     void Update()
     {
-        if (serverConnected && Input.GetKeyDown(KeyCode.E) && mapLoaded)
+        if (serverConnected && mapLoaded && !spawnOnMainThread && !auxSpawn)
         {
             SendSpawnRequest();
+            auxSpawn = true;
         }
 
         if (spawnOnMainThread)
         {
-            if (prefab != null)
+            if (prefab != null && auxSpawn)
             {
                 Instantiate(prefab, new Vector3(0, 1, 0), Quaternion.identity);
-                spawnOnMainThread = false;
+                auxSpawn = false;
             }
-            else
+            else if (auxSpawn)
             {
                 Debug.LogError("Prefab is not assigned!");
             }
