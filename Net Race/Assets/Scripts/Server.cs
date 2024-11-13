@@ -16,6 +16,10 @@ public class Server : MonoBehaviour
 
     private GameObject currentPlayer; // To store the player instance
 
+    // New flag to request spawn on main thread
+    private bool spawnRequested = false;
+    private IPEndPoint lastClientEndpoint; // Store the last client endpoint to send responses
+
     void Start()
     {
         map = "Lobby";
@@ -25,6 +29,16 @@ public class Server : MonoBehaviour
 
         Thread receiveThread = new Thread(Receive);
         receiveThread.Start();
+    }
+
+    void Update()
+    {
+        // Check the spawnRequested flag and instantiate on main thread
+        if (spawnRequested)
+        {
+            SpawnPlayer();
+            spawnRequested = false;
+        }
     }
 
     void Receive()
@@ -41,6 +55,8 @@ public class Server : MonoBehaviour
                 string message = Encoding.ASCII.GetString(data, 0, recv);
 
                 Debug.Log($"Received message: {message} from {remoteEndPoint}");
+
+                lastClientEndpoint = (IPEndPoint)remoteEndPoint; // Store the endpoint for responses
 
                 if (message == "Ping")
                 {
@@ -59,8 +75,8 @@ public class Server : MonoBehaviour
                 {
                     byte[] response = Encoding.ASCII.GetBytes("SpawnReceived");
                     socket.SendTo(response, remoteEndPoint);
-                    // Call the method to spawn the player
-                    SpawnPlayer();
+                    // Set flag to request player spawn on main thread
+                    spawnRequested = true;
                 }
                 else if (message.StartsWith("Position:"))
                 {
@@ -104,47 +120,55 @@ public class Server : MonoBehaviour
             string positionString = parts[0].Replace("Position:", "");
             string[] positionValues = positionString.Split(',');
 
+            // Check if we have exactly 3 position values
             if (positionValues.Length == 3)
             {
-                float x = float.Parse(positionValues[0]);
-                float y = float.Parse(positionValues[1]);
-                float z = float.Parse(positionValues[2]);
-                Vector3 position = new Vector3(x, y, z);
-
-                string rotationString = parts[1].Replace("Rotation:", "");
-                string[] rotationValues = rotationString.Split(',');
-
-                if (rotationValues.Length == 3)
+                if (float.TryParse(positionValues[0], out float x) &&
+                    float.TryParse(positionValues[1], out float y) &&
+                    float.TryParse(positionValues[2], out float z))
                 {
-                    float rotX = float.Parse(rotationValues[0]);
-                    float rotY = float.Parse(rotationValues[1]);
-                    float rotZ = float.Parse(rotationValues[2]);
-                    Quaternion rotation = Quaternion.Euler(rotX, rotY, rotZ);
+                    Vector3 position = new Vector3(x, y, z);
 
-                    if (currentPlayer != null)
+                    string rotationString = parts[1].Replace("Rotation:", "");
+                    string[] rotationValues = rotationString.Split(',');
+
+                    if (rotationValues.Length == 3 &&
+                        float.TryParse(rotationValues[0], out float rotX) &&
+                        float.TryParse(rotationValues[1], out float rotY) &&
+                        float.TryParse(rotationValues[2], out float rotZ))
                     {
-                        currentPlayer.transform.position = position;
-                        currentPlayer.transform.rotation = rotation;
-                        Debug.Log($"Updated player position to: {position} and rotation to: {rotation}");
+                        Quaternion rotation = Quaternion.Euler(rotX, rotY, rotZ);
+
+                        if (currentPlayer != null)
+                        {
+                            currentPlayer.transform.position = position;
+                            currentPlayer.transform.rotation = rotation;
+                            Debug.Log($"Updated player position to: {position} and rotation to: {rotation}");
+                        }
+                        else
+                        {
+                            Debug.LogWarning("No player instantiated yet.");
+                        }
                     }
                     else
                     {
-                        Debug.LogWarning("No player instantiated yet.");
+                        Debug.LogError($"Invalid rotation data: {rotationString}");
                     }
                 }
                 else
                 {
-                    Debug.LogError("Invalid rotation data.");
+                    Debug.LogError($"Invalid position data values: {positionString}");
                 }
             }
             else
             {
-                Debug.LogError("Invalid position data.");
+                Debug.LogWarning($"Unexpected number of position values. Raw data: {positionString}");
             }
         }
         else
         {
-            Debug.LogError("Invalid message format for position and rotation.");
+            Debug.LogError($"Invalid message format for position and rotation. Raw message: {message}");
         }
     }
 }
+

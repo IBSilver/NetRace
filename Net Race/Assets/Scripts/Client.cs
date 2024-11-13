@@ -19,6 +19,9 @@ public class Client : MonoBehaviour
     public GameObject prefabMap1;
     public GameObject prefabMap2;
 
+    // Store reference to instantiated prefab in the scene
+    private GameObject instantiatedPrefab;
+
     void Start()
     {
         serverEndpoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 9050);
@@ -45,7 +48,8 @@ public class Client : MonoBehaviour
         {
             if (prefab != null && auxSpawn)
             {
-                Instantiate(prefab, new Vector3(0, 1, 0), Quaternion.identity);
+                // Instantiate prefab and store reference to instantiatedPrefab
+                instantiatedPrefab = Instantiate(prefab, new Vector3(0, 1, 0), Quaternion.identity);
                 auxSpawn = false;
             }
             else if (auxSpawn)
@@ -147,17 +151,23 @@ public class Client : MonoBehaviour
 
     void SendPositionAndRotation()
     {
-        GameObject player = prefab.transform.Find("PlayerGO")?.gameObject;
+        GameObject player;
 
-        if (player == null)
+        if (instantiatedPrefab == null)
         {
-            Debug.LogError("Prefab is null, cannot send position and rotation.");
+            Debug.LogError("Instantiated prefab is null, cannot send position and rotation.");
             return;
         }
+        else
+        {
+            player = instantiatedPrefab.transform.Find("PlayerGO")?.gameObject;
+        }
 
+        // Get position and rotation from the instantiated prefab
         Vector3 position = player.transform.position;
         Quaternion rotation = player.transform.rotation;
 
+        // Create a message string with the prefab's position and rotation
         string message = $"Position:{position.x},{position.y},{position.z} Rotation:{rotation.eulerAngles.x},{rotation.eulerAngles.y},{rotation.eulerAngles.z}";
 
         // Send the message to the server
@@ -230,5 +240,3 @@ public class Client : MonoBehaviour
         }
     }
 }
-
-
