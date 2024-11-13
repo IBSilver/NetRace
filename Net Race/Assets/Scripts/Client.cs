@@ -19,7 +19,6 @@ public class Client : MonoBehaviour
     public GameObject prefabMap1;
     public GameObject prefabMap2;
 
-    // Store reference to instantiated prefab in the scene
     private GameObject instantiatedPrefab;
 
     void Start()
@@ -33,7 +32,7 @@ public class Client : MonoBehaviour
 
         InvokeRepeating(nameof(CheckForServer), 1, 1);
         InvokeRepeating(nameof(SendMapRequest), 1, 5);
-        InvokeRepeating(nameof(SendPositionAndRotation), 1, 1);
+        InvokeRepeating(nameof(SendPositionAndRotation), 1, 0.1f);
     }
 
     void Update()
@@ -163,14 +162,11 @@ public class Client : MonoBehaviour
             player = instantiatedPrefab.transform.Find("PlayerGO")?.gameObject;
         }
 
-        // Get position and rotation from the instantiated prefab
         Vector3 position = player.transform.position;
         Quaternion rotation = player.transform.rotation;
 
-        // Create a message string with the prefab's position and rotation
-        string message = $"Position:{position.x},{position.y},{position.z} Rotation:{rotation.eulerAngles.x},{rotation.eulerAngles.y},{rotation.eulerAngles.z}";
+        string message = $"Position:{position.x}.{position.y}.{position.z} Rotation:{rotation.eulerAngles.x}.{rotation.eulerAngles.y}.{rotation.eulerAngles.z}";
 
-        // Send the message to the server
         byte[] data = Encoding.ASCII.GetBytes(message);
         socket.SendTo(data, serverEndpoint);
         Debug.Log($"Sent position and rotation: {message}");
