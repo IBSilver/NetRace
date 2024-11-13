@@ -3,6 +3,21 @@ using System.Net.Sockets;
 using System.Text;
 using UnityEngine;
 using System.Threading;
+using System.Collections.Generic;
+
+public class PlayerInfo
+{
+    public string playerID;
+    public GameObject playerGO;
+    public string playerName; 
+
+    public PlayerInfo(string id, GameObject go, string name)
+    {
+        playerID = id;
+        playerGO = go;
+        playerName = name;
+    }
+}
 
 public class Server : MonoBehaviour
 {
@@ -17,6 +32,8 @@ public class Server : MonoBehaviour
     private GameObject currentPlayer;
     private GameObject playerObject;
 
+    public List<PlayerInfo> players;
+
     // Flags and data for main-thread updates
     private bool spawnRequested = false;
     private bool positionUpdateRequested = false;
@@ -26,6 +43,7 @@ public class Server : MonoBehaviour
 
     void Start()
     {
+        players = new List<PlayerInfo>();
         map = "Lobby";
         serverEndPoint = new IPEndPoint(IPAddress.Any, 9050);
         socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
