@@ -38,7 +38,9 @@ public class Server : MonoBehaviour
     private bool instantiatePlayerFlag = false;
     private string playerInfoMessage = "";
 
+    //Had to use this to solve an error with the Instatiate in a thread different from the main
     private Queue<(string playerID, Vector3 newPosition, Quaternion newRotation)> positionUpdateQueue = new Queue<(string, Vector3, Quaternion)>();
+
     private IPEndPoint ipAux = null;
 
     void Start()

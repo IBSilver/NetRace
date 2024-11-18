@@ -30,6 +30,11 @@ public class Client : MonoBehaviour
 
     private readonly object playersLock = new object();
 
+    //Used to avoid error when Instantiating prefab not in the main thread
+    private readonly Queue<System.Action> mainThreadActions = new Queue<System.Action>();
+
+    private readonly object actionsLock = new object();
+
     void Start()
     {
         players = new List<PlayerInfo>();
@@ -50,7 +55,9 @@ public class Client : MonoBehaviour
 
     void Update()
     {
-        if (spawnOnMainThread && instantiatedPrefab == null &&mapLoaded == true)
+        ProcessMainThreadActions();
+
+        if (spawnOnMainThread && instantiatedPrefab == null && mapLoaded == true)
         {
             instantiatedPrefab = Instantiate(localPlayerPrefab, new Vector3(0, 1, 0), Quaternion.identity);
             spawnOnMainThread = false;
@@ -61,6 +68,25 @@ public class Client : MonoBehaviour
             InstantiateMap(mapToLoad.Value);
             mapLoaded = true;
             mapToLoad = null; // Reset after loading
+        }
+    }
+    //Function used to avoid error when Instantiating prefab not in the main thread
+    void EnqueueMainThreadAction(System.Action action)
+    {
+        lock (actionsLock)
+        {
+            mainThreadActions.Enqueue(action);
+        }
+    }
+    //Function used to avoid error when Instantiating prefab not in the main thread
+    void ProcessMainThreadActions()
+    {
+        lock (actionsLock)
+        {
+            while (mainThreadActions.Count > 0)
+            {
+                mainThreadActions.Dequeue()?.Invoke();
+            }
         }
     }
     void SendPositionAndRotation()
@@ -157,28 +183,30 @@ public class Client : MonoBehaviour
                             string[] parts = message.Split(':');
                             if (parts.Length == 3)
                             {
-                                string playerID = parts[1];
-                                string playerName = parts[2];
+                                string receivedPlayerID = parts[1];
+                                string receivedPlayerName = parts[2];
 
-                                // Check if the player already exists
-                                if (!players.Exists(p => p.playerID == playerID))
+                                EnqueueMainThreadAction(() =>
                                 {
-                                    GameObject newPlayerGO = Instantiate(remotePlayerPrefab, Vector3.zero, Quaternion.identity);
-                                    AddPlayer(playerID, newPlayerGO, playerName);
-                                }
+                                    if (!players.Exists(p => p.playerID == receivedPlayerID))
+                                    {
+                                        GameObject newPlayerGO = Instantiate(remotePlayerPrefab, Vector3.zero, Quaternion.identity);
+                                        AddPlayer(receivedPlayerID, newPlayerGO, receivedPlayerName);
+                                    }
+                                });
                             }
                         }
                         else if (message == "Lobby")
                         {
-                            mapToLoad = 0;
+                            EnqueueMainThreadAction(() => mapToLoad = 0);
                         }
                         else if (message == "FirstMap")
                         {
-                            mapToLoad = 1;
+                            EnqueueMainThreadAction(() => mapToLoad = 1);
                         }
                         else if (message.StartsWith("ID:"))
                         {
-                            HandlePlayers(message);
+                            EnqueueMainThreadAction(() => HandlePlayers(message));
                         }
                     }
                 }
@@ -200,20 +228,18 @@ public class Client : MonoBehaviour
             }
         }
     }
+
     void HandlePlayers(string message)
     {
-        // Split the message by space to extract ID, Position, and Rotation
         string[] parts = message.Split(' ');
         if (parts.Length >= 3)
         {
-            // Extract player ID
             string idPart = parts[0].Replace("ID:", "");
 
             // Skip if the ID matches the local client's player ID
             if (idPart == playerID)
                 return;
 
-            // Extract position
             string positionString = parts[1].Replace("Position:", "");
             string[] positionValues = positionString.Split('.');
             if (positionValues.Length == 3 &&
@@ -223,7 +249,6 @@ public class Client : MonoBehaviour
             {
                 Vector3 newPosition = new Vector3(x, y, z);
 
-                // Extract rotation
                 string rotationString = parts[2].Replace("Rotation:", "");
                 string[] rotationValues = rotationString.Split('.');
                 if (rotationValues.Length == 3 &&
