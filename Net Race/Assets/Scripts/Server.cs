@@ -34,12 +34,10 @@ public class Server : MonoBehaviour
 
     private List<PlayerInfo> players;
 
-    // Flags and data for main-thread updates
-    private bool spawnRequested = false;
-    private bool positionUpdateRequested = false;
-    private Vector3 newPosition;
-    private Quaternion newRotation;
-    private IPEndPoint lastClientEndpoint;
+    private bool instantiatePlayerFlag = false;
+    private string playerInfoMessage = "";
+
+    private Queue<(string playerID, Vector3 newPosition, Quaternion newRotation)> positionUpdateQueue = new Queue<(string, Vector3, Quaternion)>();
 
     void Start()
     {
@@ -55,22 +53,41 @@ public class Server : MonoBehaviour
 
     void Update()
     {
-        if (spawnRequested)
+        // Process position updates from the queue
+        while (positionUpdateQueue.Count > 0)
         {
-            SpawnPlayer();
-            spawnRequested = false;
+            var update = positionUpdateQueue.Dequeue();
+            string playerID = update.playerID;
+            Vector3 newPosition = update.newPosition;
+            Quaternion newRotation = update.newRotation;
+
+            PlayerInfo player = players.Find(p => p.playerID == playerID);
+
+            if (player != null)
+            {
+                GameObject playerGO = player.playerGO;
+
+                if (playerGO != null)
+                {
+                    playerGO.transform.position = newPosition;
+                    playerGO.transform.rotation = newRotation;
+
+                    Debug.Log($"Updated player {player.playerName} (ID: {playerID}) to position {newPosition} and rotation {newRotation.eulerAngles}");
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"Player with ID {playerID} not found for position update.");
+            }
         }
 
-        // Apply position updates on main thread if Player object exists
-        if (positionUpdateRequested && playerObject != null)
+        // If the flag is set, instantiate the player and reset the flag
+        if (instantiatePlayerFlag)
         {
-            playerObject.transform.position = newPosition;
-            playerObject.transform.rotation = newRotation;
-            Debug.Log($"Updated player position to: {newPosition} and rotation to: {newRotation}");
-            positionUpdateRequested = false;
+            HandlePlayerInfo(playerInfoMessage);
+            instantiatePlayerFlag = false; // Reset the flag
         }
     }
-
     void Receive()
     {
         byte[] data = new byte[1024];
@@ -86,11 +103,13 @@ public class Server : MonoBehaviour
 
                 Debug.Log($"Received message: {message} from {remoteEndPoint}");
 
-                lastClientEndpoint = (IPEndPoint)remoteEndPoint;
-
-                if (message == "Ping")
+                if (message.StartsWith("PlayerInfo:"))
                 {
-                    // Respond with Pong when ping is received
+                    playerInfoMessage = message;
+                    instantiatePlayerFlag = true;
+                }
+                else if (message == "Ping")
+                {
                     byte[] response = Encoding.ASCII.GetBytes("Pong");
                     socket.SendTo(response, remoteEndPoint);
                     Debug.Log("Sent Pong to client.");
@@ -101,17 +120,9 @@ public class Server : MonoBehaviour
                     socket.SendTo(response, remoteEndPoint);
                     Debug.Log($"Sent map: {map}");
                 }
-                else if (message == "Spawn")
+                else if (message.StartsWith("ID:"))
                 {
-                    byte[] response = Encoding.ASCII.GetBytes("SpawnReceived");
-                    socket.SendTo(response, remoteEndPoint);
-                    // Set flag to request player spawn on main thread
-                    spawnRequested = true;
-                }
-                else if (message.StartsWith("Position:"))
-                {
-                    ParsePositionAndRotation(message);
-                    positionUpdateRequested = true; // Flag to apply in Update
+                    ParsePositionWithID(message);
                 }
             }
             catch (SocketException ex)
@@ -121,83 +132,87 @@ public class Server : MonoBehaviour
         }
     }
 
-    void SpawnPlayer()
+    void UpdatePlayerPosition(string playerID, Vector3 newPosition, Quaternion newRotation)
     {
-        if (playerPrefab != null && currentPlayer == null) // Ensure only one player is spawned
+        // Enqueue the update to be processed on the main thread
+        lock (positionUpdateQueue)
         {
-            Vector3 spawnPosition = new Vector3(0, 1, 0);
-            Quaternion spawnRotation = Quaternion.identity;
-
-            currentPlayer = Instantiate(playerPrefab, spawnPosition, spawnRotation);
-            playerObject = currentPlayer.transform.Find("Player")?.gameObject;
-
-            if (playerObject != null)
-            {
-                Debug.Log("Player spawned and Player child found.");
-            }
-            else
-            {
-                Debug.LogError("No 'Player' child found in the instantiated prefab.");
-            }
+            positionUpdateQueue.Enqueue((playerID, newPosition, newRotation));
         }
-        else if (currentPlayer != null)
+    }
+    void HandlePlayerInfo(string message)
+    {
+        string[] parts = message.Split(':');
+        if (parts.Length == 3 && parts[0] == "PlayerInfo")
         {
-            Debug.LogWarning("Player already spawned.");
+            string playerID = parts[1];
+            string playerName = parts[2];
+
+            if (players.Exists(player => player.playerID == playerID))
+            {
+                Debug.LogWarning($"Player with ID {playerID} already exists. Ignoring.");
+                return;
+            }
+
+            GameObject newPlayerGO = Instantiate(playerPrefab, new Vector3(0, 1, 0), Quaternion.identity);
+            AddPlayer(playerID, newPlayerGO, playerName);
+
+            Debug.Log($"Added player: {playerName} with ID: {playerID}");
         }
         else
         {
-            Debug.LogError("Player prefab is not assigned!");
+            Debug.LogError($"Invalid PlayerInfo message: {message}");
         }
     }
-
-    void ParsePositionAndRotation(string message)
+    void ParsePositionWithID(string message)
     {
+        // Split by space to get Position and Rotation parts
         string[] parts = message.Split(' ');
+
         if (parts.Length >= 2)
         {
-            string positionString = parts[0].Replace("Position:", "");
+
+            string idPart = parts[0].Replace("ID:", "");
+            string positionString = parts[1].Replace("Position:", "");
+
+          
             string[] positionValues = positionString.Split('.');
 
-            // Check if we have exactly 3 position values
-            if (positionValues.Length == 3)
+            if (positionValues.Length == 3 &&
+                float.TryParse(positionValues[0], out float x) &&
+                float.TryParse(positionValues[1], out float y) &&
+                float.TryParse(positionValues[2], out float z))
             {
-                if (float.TryParse(positionValues[0], out float x) &&
-                    float.TryParse(positionValues[1], out float y) &&
-                    float.TryParse(positionValues[2], out float z))
+                Vector3 newPosition = new Vector3(x, y, z);
+
+                
+                string rotationString = parts[2].Replace("Rotation:", "");
+                string[] rotationValues = rotationString.Split('.');
+
+                if (rotationValues.Length == 3 &&
+                    float.TryParse(rotationValues[0], out float rotX) &&
+                    float.TryParse(rotationValues[1], out float rotY) &&
+                    float.TryParse(rotationValues[2], out float rotZ))
                 {
-                    newPosition = new Vector3(x, y, z);
+                    Quaternion newRotation = Quaternion.Euler(rotX, rotY, rotZ);
 
-                    string rotationString = parts[1].Replace("Rotation:", "");
-                    string[] rotationValues = rotationString.Split('.');
-
-                    if (rotationValues.Length == 3 &&
-                        float.TryParse(rotationValues[0], out float rotX) &&
-                        float.TryParse(rotationValues[1], out float rotY) &&
-                        float.TryParse(rotationValues[2], out float rotZ))
-                    {
-                        newRotation = Quaternion.Euler(rotX, rotY, rotZ);
-                    }
-                    else
-                    {
-                        Debug.LogError($"Invalid rotation data: {rotationString}");
-                    }
+                    UpdatePlayerPosition(idPart, newPosition, newRotation);
                 }
                 else
                 {
-                    Debug.LogError($"Invalid position data values: {positionString}");
+                    Debug.LogError($"Invalid rotation data: {rotationString}");
                 }
             }
             else
             {
-                Debug.LogWarning($"Unexpected number of position values. Raw data: {positionString}");
+                Debug.LogError($"Invalid position data: {positionString}");
             }
         }
         else
         {
-            Debug.LogError($"Invalid message format for position and rotation. Raw message: {message}");
+            Debug.LogError($"Invalid message format for position update: {message}");
         }
     }
-
     private void AddPlayer(string playerID, GameObject playerGO, string playerName)
     {
         PlayerInfo newPlayer = new PlayerInfo(playerID, playerGO, playerName);

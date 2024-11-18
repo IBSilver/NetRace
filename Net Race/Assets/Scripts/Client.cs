@@ -11,14 +11,15 @@ public class Client : MonoBehaviour
     IPEndPoint serverEndpoint;
     private bool serverConnected = false;
     private bool mapLoaded = false;
-    private bool spawnOnMainThread = false;
-    private bool auxSpawn = false;
+    private bool spawnOnMainThread = true;
 
     private int? mapToLoad = null; // This flag will store which map to load on the main thread
 
-    public GameObject prefab;
     public GameObject prefabMap1;
     public GameObject prefabMap2;
+
+    public GameObject localPlayerPrefab;
+    public GameObject remotePlayerPrefab;
 
     private GameObject instantiatedPrefab;
 
@@ -26,6 +27,8 @@ public class Client : MonoBehaviour
 
     private string playerID;
     private string playerName;
+
+    private readonly object playersLock = new object();
 
     void Start()
     {
@@ -42,37 +45,48 @@ public class Client : MonoBehaviour
         InvokeRepeating(nameof(CheckForServer), 1, 1);
         InvokeRepeating(nameof(SendMapRequest), 1, 5);
         InvokeRepeating(nameof(SendPositionAndRotation), 1, 0.1f);
+        InvokeRepeating(nameof(SendPlayerInfo), 2f, 1);
     }
 
     void Update()
     {
-        if (serverConnected && mapLoaded && !spawnOnMainThread && !auxSpawn)
+        if (spawnOnMainThread && instantiatedPrefab == null &&mapLoaded == true)
         {
-            SendSpawnRequest();
-            auxSpawn = true;
+            instantiatedPrefab = Instantiate(localPlayerPrefab, new Vector3(0, 1, 0), Quaternion.identity);
+            spawnOnMainThread = false;
         }
 
-        if (spawnOnMainThread)
-        {
-            if (prefab != null && auxSpawn)
-            {
-                // Instantiate prefab and store reference to instantiatedPrefab
-                instantiatedPrefab = Instantiate(prefab, new Vector3(0, 1, 0), Quaternion.identity);
-                auxSpawn = false;
-            }
-            else if (auxSpawn)
-            {
-                Debug.LogError("Prefab is not assigned!");
-            }
-        }
-
-        // Check if a map needs to be loaded
         if (mapToLoad.HasValue)
         {
             InstantiateMap(mapToLoad.Value);
             mapLoaded = true;
             mapToLoad = null; // Reset after loading
         }
+    }
+    void SendPositionAndRotation()
+    {
+        if (instantiatedPrefab == null)
+        {
+            Debug.LogError("Instantiated prefab is null, cannot send position and rotation.");
+            return;
+        }
+
+        GameObject player = instantiatedPrefab.transform.Find("PlayerGO")?.gameObject;
+
+        if (player == null)
+        {
+            Debug.LogError("PlayerGO is not found in the instantiated prefab.");
+            return;
+        }
+
+        Vector3 position = player.transform.position;
+        Quaternion rotation = player.transform.rotation;
+
+        string message = $"ID:{playerID} Position:{position.x}.{position.y}.{position.z} Rotation:{rotation.eulerAngles.x}.{rotation.eulerAngles.y}.{rotation.eulerAngles.z}";
+
+        byte[] data = Encoding.ASCII.GetBytes(message);
+        socket.SendTo(data, serverEndpoint);
+        Debug.Log($"Sent position and rotation with ID: {message}");
     }
     private string GenerateRandomPlayerID()
     {
@@ -93,6 +107,17 @@ public class Client : MonoBehaviour
         return nameBuilder.ToString();
     }
 
+    void SendPlayerInfo()
+    {
+        if (serverConnected)
+        {
+            string message = $"PlayerInfo:{playerID}:{playerName}";
+            byte[] data = Encoding.ASCII.GetBytes(message);
+            socket.SendTo(data, serverEndpoint);
+            Debug.Log($"Sent player info: {message}");
+        }
+    }
+
     void SendMapRequest()
     {
         if (mapLoaded || !serverConnected) return;
@@ -103,21 +128,6 @@ public class Client : MonoBehaviour
             byte[] data = Encoding.ASCII.GetBytes(message);
             socket.SendTo(data, serverEndpoint);
             Debug.Log("Map request sent to server");
-        }
-        catch (SocketException ex)
-        {
-            Debug.LogError($"SocketException on Send: {ex.Message}");
-        }
-    }
-
-    void SendSpawnRequest()
-    {
-        try
-        {
-            string message = "Spawn";
-            byte[] data = Encoding.ASCII.GetBytes(message);
-            socket.SendTo(data, serverEndpoint);
-            Debug.Log("Spawn request sent to server");
         }
         catch (SocketException ex)
         {
@@ -142,9 +152,21 @@ public class Client : MonoBehaviour
                         string message = Encoding.ASCII.GetString(data, 0, recv).Trim();
                         Debug.Log($"Received message: {message}");
 
-                        if (message == "SpawnReceived")
+                        if (message.StartsWith("PlayerInfo:"))
                         {
-                            spawnOnMainThread = true;
+                            string[] parts = message.Split(':');
+                            if (parts.Length == 3)
+                            {
+                                string playerID = parts[1];
+                                string playerName = parts[2];
+
+                                // Check if the player already exists
+                                if (!players.Exists(p => p.playerID == playerID))
+                                {
+                                    GameObject newPlayerGO = Instantiate(remotePlayerPrefab, Vector3.zero, Quaternion.identity);
+                                    AddPlayer(playerID, newPlayerGO, playerName);
+                                }
+                            }
                         }
                         else if (message == "Lobby")
                         {
@@ -174,31 +196,6 @@ public class Client : MonoBehaviour
             }
         }
     }
-
-    void SendPositionAndRotation()
-    {
-        GameObject player;
-
-        if (instantiatedPrefab == null)
-        {
-            Debug.LogError("Instantiated prefab is null, cannot send position and rotation.");
-            return;
-        }
-        else
-        {
-            player = instantiatedPrefab.transform.Find("PlayerGO")?.gameObject;
-        }
-
-        Vector3 position = player.transform.position;
-        Quaternion rotation = player.transform.rotation;
-
-        string message = $"Position:{position.x}.{position.y}.{position.z} Rotation:{rotation.eulerAngles.x}.{rotation.eulerAngles.y}.{rotation.eulerAngles.z}";
-
-        byte[] data = Encoding.ASCII.GetBytes(message);
-        socket.SendTo(data, serverEndpoint);
-        Debug.Log($"Sent position and rotation: {message}");
-    }
-
     void CheckForServer()
     {
         try
@@ -247,41 +244,45 @@ public class Client : MonoBehaviour
         switch (mapId)
         {
             case 0:
-                Instantiate(prefabMap1);
                 if (prefabMap1 != null)
                 {
+                    Instantiate(prefabMap1);
                     Destroy(prefabMap2);
                 }
                 break;
             case 1:
-                Instantiate(prefabMap2);
                 if (prefabMap2 != null)
                 {
-                    Destroy(prefabMap2);
+                    Instantiate(prefabMap2);
+                    Destroy(prefabMap1); 
                 }
                 break;
         }
     }
-
-    private void AddPlayer(string playerID, GameObject playerGO, string playerName)
+    void AddPlayer(string playerID, GameObject playerGO, string playerName)
     {
-        PlayerInfo newPlayer = new PlayerInfo(playerID, playerGO, playerName);
-        players.Add(newPlayer);
-        Debug.Log($"Player {playerName} with ID {playerID} added.");
-    }
-
-    private void RemovePlayer(string playerID)
-    {
-        PlayerInfo playerToRemove = players.Find(player => player.playerID == playerID);
-        if (playerToRemove != null)
+        lock (playersLock)
         {
-            players.Remove(playerToRemove);
-            Debug.Log($"Player {playerToRemove.playerName} with ID {playerID} removed.");
-        }
-        else
-        {
-            Debug.LogWarning($"Player with ID {playerID} not found.");
+            PlayerInfo newPlayer = new PlayerInfo(playerID, playerGO, playerName);
+            players.Add(newPlayer);
+            Debug.Log($"Player {playerName} with ID {playerID} added.");
         }
     }
 
+    void RemovePlayer(string playerID)
+    {
+        lock (playersLock)
+        {
+            PlayerInfo playerToRemove = players.Find(player => player.playerID == playerID);
+            if (playerToRemove != null)
+            {
+                players.Remove(playerToRemove);
+                Debug.Log($"Player {playerToRemove.playerName} with ID {playerID} removed.");
+            }
+            else
+            {
+                Debug.LogWarning($"Player with ID {playerID} not found.");
+            }
+        }
+    }
 }
