@@ -9,7 +9,8 @@ public class PlayerInfo
 {
     public string playerID;
     public GameObject playerGO;
-    public string playerName; 
+    public string playerName;
+    public IPEndPoint ip;
 
     public PlayerInfo(string id, GameObject go, string name)
     {
@@ -38,6 +39,7 @@ public class Server : MonoBehaviour
     private string playerInfoMessage = "";
 
     private Queue<(string playerID, Vector3 newPosition, Quaternion newRotation)> positionUpdateQueue = new Queue<(string, Vector3, Quaternion)>();
+    private IPEndPoint ipAux = null;
 
     void Start()
     {
@@ -107,6 +109,7 @@ public class Server : MonoBehaviour
                 {
                     playerInfoMessage = message;
                     instantiatePlayerFlag = true;
+                    ipAux = remoteEndPoint as IPEndPoint;
                 }
                 else if (message == "Ping")
                 {
@@ -216,6 +219,7 @@ public class Server : MonoBehaviour
     private void AddPlayer(string playerID, GameObject playerGO, string playerName)
     {
         PlayerInfo newPlayer = new PlayerInfo(playerID, playerGO, playerName);
+        newPlayer.ip = ipAux;
         players.Add(newPlayer);
         Debug.Log($"Player {playerName} with ID {playerID} added.");
     }
