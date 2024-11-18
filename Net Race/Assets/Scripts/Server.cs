@@ -51,6 +51,8 @@ public class Server : MonoBehaviour
 
         Thread receiveThread = new Thread(Receive);
         receiveThread.Start();
+        InvokeRepeating(nameof(SendPositionAndRotation), 1, 0.1f);
+
     }
 
     void Update()
@@ -132,6 +134,21 @@ public class Server : MonoBehaviour
             {
                 Debug.LogError($"Error receiving data: {ex.Message}");
             }
+        }
+    }
+
+    void SendPositionAndRotation()
+    {
+        foreach (var player in players)
+        {
+            Vector3 position = player.playerGO.transform.position;
+            Quaternion rotation = player.playerGO.transform.rotation;
+
+            string message = $"ID:{player.playerID} Position:{position.x}.{position.y}.{position.z} Rotation:{rotation.eulerAngles.x}.{rotation.eulerAngles.y}.{rotation.eulerAngles.z}";
+
+            byte[] data = Encoding.ASCII.GetBytes(message);
+            socket.SendTo(data, player.ip);
+
         }
     }
 

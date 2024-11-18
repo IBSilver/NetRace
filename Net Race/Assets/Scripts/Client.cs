@@ -176,6 +176,10 @@ public class Client : MonoBehaviour
                         {
                             mapToLoad = 1;
                         }
+                        else if (message.StartsWith("ID:"))
+                        {
+                            HandlePlayers(message);
+                        }
                     }
                 }
                 catch (SocketException ex)
@@ -195,6 +199,10 @@ public class Client : MonoBehaviour
                 Thread.Sleep(100);
             }
         }
+    }
+    void HandlePlayers(string message)
+    {
+
     }
     void CheckForServer()
     {
