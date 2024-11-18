@@ -32,7 +32,7 @@ public class Server : MonoBehaviour
     private GameObject currentPlayer;
     private GameObject playerObject;
 
-    public List<PlayerInfo> players;
+    private List<PlayerInfo> players;
 
     // Flags and data for main-thread updates
     private bool spawnRequested = false;
@@ -195,6 +195,26 @@ public class Server : MonoBehaviour
         else
         {
             Debug.LogError($"Invalid message format for position and rotation. Raw message: {message}");
+        }
+    }
+
+    private void AddPlayer(string playerID, GameObject playerGO, string playerName)
+    {
+        PlayerInfo newPlayer = new PlayerInfo(playerID, playerGO, playerName);
+        players.Add(newPlayer);
+        Debug.Log($"Player {playerName} with ID {playerID} added.");
+    }
+    private void RemovePlayer(string playerID)
+    {
+        PlayerInfo playerToRemove = players.Find(player => player.playerID == playerID);
+        if (playerToRemove != null)
+        {
+            players.Remove(playerToRemove);
+            Debug.Log($"Player {playerToRemove.playerName} with ID {playerID} removed.");
+        }
+        else
+        {
+            Debug.LogWarning($"Player with ID {playerID} not found.");
         }
     }
 }

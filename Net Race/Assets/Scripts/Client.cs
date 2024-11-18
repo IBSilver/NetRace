@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Text;
 using UnityEngine;
 using System.Threading;
+using System.Collections.Generic;
 
 public class Client : MonoBehaviour
 {
@@ -21,8 +22,16 @@ public class Client : MonoBehaviour
 
     private GameObject instantiatedPrefab;
 
+    private List<PlayerInfo> players;
+
+    private string playerID;
+    private string playerName;
+
     void Start()
     {
+        players = new List<PlayerInfo>();
+        playerID = GenerateRandomPlayerID();
+        playerName = GenerateRandomPlayerName();
         serverEndpoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 9050);
         socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         socket.ReceiveTimeout = 1000;
@@ -64,6 +73,24 @@ public class Client : MonoBehaviour
             mapLoaded = true;
             mapToLoad = null; // Reset after loading
         }
+    }
+    private string GenerateRandomPlayerID()
+    {
+        return $"Player_{Random.Range(1000, 99999)}";
+    }
+    private string GenerateRandomPlayerName()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        int nameLength = Random.Range(5, 10);
+        StringBuilder nameBuilder = new StringBuilder();
+
+        for (int i = 0; i < nameLength; i++)
+        {
+            char randomChar = chars[Random.Range(0, chars.Length)];
+            nameBuilder.Append(randomChar);
+        }
+
+        return nameBuilder.ToString();
     }
 
     void SendMapRequest()
@@ -235,4 +262,26 @@ public class Client : MonoBehaviour
                 break;
         }
     }
+
+    private void AddPlayer(string playerID, GameObject playerGO, string playerName)
+    {
+        PlayerInfo newPlayer = new PlayerInfo(playerID, playerGO, playerName);
+        players.Add(newPlayer);
+        Debug.Log($"Player {playerName} with ID {playerID} added.");
+    }
+
+    private void RemovePlayer(string playerID)
+    {
+        PlayerInfo playerToRemove = players.Find(player => player.playerID == playerID);
+        if (playerToRemove != null)
+        {
+            players.Remove(playerToRemove);
+            Debug.Log($"Player {playerToRemove.playerName} with ID {playerID} removed.");
+        }
+        else
+        {
+            Debug.LogWarning($"Player with ID {playerID} not found.");
+        }
+    }
+
 }
