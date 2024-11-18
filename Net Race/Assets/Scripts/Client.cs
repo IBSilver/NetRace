@@ -202,7 +202,77 @@ public class Client : MonoBehaviour
     }
     void HandlePlayers(string message)
     {
+        // Split the message by space to extract ID, Position, and Rotation
+        string[] parts = message.Split(' ');
+        if (parts.Length >= 3)
+        {
+            // Extract player ID
+            string idPart = parts[0].Replace("ID:", "");
 
+            // Skip if the ID matches the local client's player ID
+            if (idPart == playerID)
+                return;
+
+            // Extract position
+            string positionString = parts[1].Replace("Position:", "");
+            string[] positionValues = positionString.Split('.');
+            if (positionValues.Length == 3 &&
+                float.TryParse(positionValues[0], out float x) &&
+                float.TryParse(positionValues[1], out float y) &&
+                float.TryParse(positionValues[2], out float z))
+            {
+                Vector3 newPosition = new Vector3(x, y, z);
+
+                // Extract rotation
+                string rotationString = parts[2].Replace("Rotation:", "");
+                string[] rotationValues = rotationString.Split('.');
+                if (rotationValues.Length == 3 &&
+                    float.TryParse(rotationValues[0], out float rotX) &&
+                    float.TryParse(rotationValues[1], out float rotY) &&
+                    float.TryParse(rotationValues[2], out float rotZ))
+                {
+                    Quaternion newRotation = Quaternion.Euler(rotX, rotY, rotZ);
+
+                    // Check if the player already exists
+                    lock (playersLock)
+                    {
+                        PlayerInfo existingPlayer = players.Find(p => p.playerID == idPart);
+                        if (existingPlayer != null)
+                        {
+                            // Update position and rotation if the player already exists
+                            if (existingPlayer.playerGO != null)
+                            {
+                                existingPlayer.playerGO.transform.position = newPosition;
+                                existingPlayer.playerGO.transform.rotation = newRotation;
+
+                                Debug.Log($"Updated player {existingPlayer.playerName} (ID: {idPart}) to position {newPosition} and rotation {newRotation.eulerAngles}");
+                            }
+                        }
+                        else
+                        {
+                            // Create a new player
+                            GameObject newPlayerGO = Instantiate(remotePlayerPrefab, newPosition, newRotation);
+                            PlayerInfo newPlayer = new PlayerInfo(idPart, newPlayerGO, "RemotePlayer");
+                            players.Add(newPlayer);
+
+                            Debug.Log($"Instantiated new player with ID: {idPart}");
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.LogError($"Invalid rotation data: {rotationString}");
+                }
+            }
+            else
+            {
+                Debug.LogError($"Invalid position data: {positionString}");
+            }
+        }
+        else
+        {
+            Debug.LogError($"Invalid message format for position update: {message}");
+        }
     }
     void CheckForServer()
     {

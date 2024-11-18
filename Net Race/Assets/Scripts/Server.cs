@@ -139,16 +139,19 @@ public class Server : MonoBehaviour
 
     void SendPositionAndRotation()
     {
-        foreach (var player in players)
+        foreach (var player1 in players)
         {
-            Vector3 position = player.playerGO.transform.position;
-            Quaternion rotation = player.playerGO.transform.rotation;
+            foreach (var player in players)
+            {
+                //Best would be to not send the data from a player to the same player but it will be left like this until a good solution is found --- TODO!!!
+                Vector3 position = player.playerGO.transform.position;
+                Quaternion rotation = player.playerGO.transform.rotation;
 
-            string message = $"ID:{player.playerID} Position:{position.x}.{position.y}.{position.z} Rotation:{rotation.eulerAngles.x}.{rotation.eulerAngles.y}.{rotation.eulerAngles.z}";
+                string message = $"ID:{player.playerID} Position:{position.x}.{position.y}.{position.z} Rotation:{rotation.eulerAngles.x}.{rotation.eulerAngles.y}.{rotation.eulerAngles.z}";
 
-            byte[] data = Encoding.ASCII.GetBytes(message);
-            socket.SendTo(data, player.ip);
-
+                byte[] data = Encoding.ASCII.GetBytes(message);
+                socket.SendTo(data, player1.ip);
+            }
         }
     }
 
