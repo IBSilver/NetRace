@@ -225,6 +225,10 @@ public class Client : MonoBehaviour
                                 RemovePlayerCompletely(removedPlayerID);
                             });
                         }
+                        else if (message.StartsWith("PlayerNameUpdate:"))
+                        {
+                            ChangePlayerName(message);
+                        }
                     }
                 }
                 catch (SocketException ex)
@@ -245,6 +249,47 @@ public class Client : MonoBehaviour
             }
         }
     }
+    //Change player name
+    void ChangePlayerName(string message)
+    {
+        string[] parts = message.Split(':');
+        if (parts.Length == 3)
+        {
+            string playerID = parts[1];
+            string newPlayerName = parts[2];
+
+            //To avoid error since its not in the main thread
+            EnqueueMainThreadAction(() =>
+            {
+                PlayerInfo player = players.Find(p => p.playerID == playerID);
+
+                if (player != null)
+                {
+                    player.playerName = newPlayerName;
+                    Debug.Log($"Player name for {playerID} updated to {newPlayerName}");
+
+                    if (player.playerGO != null)
+                    {
+                        player.playerGO.name = newPlayerName;
+                        Debug.Log($"GameObject name for {playerID} updated to {newPlayerName}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"Player GameObject for ID {playerID} not found.");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"Player with ID {playerID} not found for name change.");
+                }
+            });
+        }
+        else
+        {
+            Debug.LogError($"Invalid message format for PlayerNameUpdate: {message}");
+        }
+    }
+
     //Removing player
     void RemovePlayerCompletely(string playerID)
     {
