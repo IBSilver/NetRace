@@ -208,6 +208,15 @@ public class Client : MonoBehaviour
                         {
                             EnqueueMainThreadAction(() => HandlePlayers(message));
                         }
+                        else if (message.StartsWith("PlayerRemoved:"))
+                        {
+                            string removedPlayerID = message.Replace("PlayerRemoved:", "").Trim();
+
+                            EnqueueMainThreadAction(() =>
+                            {
+                                RemovePlayerCompletely(removedPlayerID);
+                            });
+                        }
                     }
                 }
                 catch (SocketException ex)
@@ -228,7 +237,30 @@ public class Client : MonoBehaviour
             }
         }
     }
+    //Removing player
+    void RemovePlayerCompletely(string playerID)
+    {
+        lock (playersLock)
+        {
+            PlayerInfo playerToRemove = players.Find(player => player.playerID == playerID);
 
+            if (playerToRemove != null)
+            {
+                if (playerToRemove.playerGO != null)
+                {
+                    Destroy(playerToRemove.playerGO);
+                    Debug.Log($"Destroyed game object for player {playerToRemove.playerName} (ID: {playerID}).");
+                }
+
+                players.Remove(playerToRemove);
+                Debug.Log($"Player {playerToRemove.playerName} (ID: {playerID}) removed from the client.");
+            }
+            else
+            {
+                Debug.LogWarning($"Attempted to remove player with ID {playerID}, but they were not found.");
+            }
+        }
+    }
     void HandlePlayers(string message)
     {
         string[] parts = message.Split(' ');

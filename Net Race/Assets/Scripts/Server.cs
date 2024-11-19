@@ -43,6 +43,11 @@ public class Server : MonoBehaviour
 
     private IPEndPoint ipAux = null;
 
+    //Player timeout variables
+    private Dictionary<string, float> playerLastActivity = new Dictionary<string, float>();
+    // Timeout in seconds
+    private float timeoutThreshold = 10f;
+
     void Start()
     {
         players = new List<PlayerInfo>();
@@ -54,7 +59,7 @@ public class Server : MonoBehaviour
         Thread receiveThread = new Thread(Receive);
         receiveThread.Start();
         InvokeRepeating(nameof(SendPositionAndRotation), 1, 0.1f);
-
+        InvokeRepeating(nameof(CheckPlayerTimeouts), 1f, 1f);
     }
 
     void Update()
@@ -221,6 +226,7 @@ public class Server : MonoBehaviour
                 {
                     Quaternion newRotation = Quaternion.Euler(rotX, rotY, rotZ);
 
+                    UpdatePlayerActivity(idPart);
                     UpdatePlayerPosition(idPart, newPosition, newRotation);
                 }
                 else
@@ -257,5 +263,76 @@ public class Server : MonoBehaviour
         {
             Debug.LogWarning($"Player with ID {playerID} not found.");
         }
+    }
+
+    //Player timeout functions
+    void CheckPlayerTimeouts()
+    {
+        float currentTime = Time.time;
+
+        foreach (var player in players)
+        {
+            if (playerLastActivity.TryGetValue(player.playerID, out float lastActivityTime))
+            {
+                if (currentTime - lastActivityTime > timeoutThreshold)
+                {
+                    Debug.Log($"Player {player.playerName} (ID: {player.playerID}) is inactive for {timeoutThreshold} seconds.");
+                    RemovePlayerCompletely(player.playerID);
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"No activity record found for player {player.playerName} (ID: {player.playerID}).");
+            }
+        }
+    }
+
+    public void UpdatePlayerActivity(string playerID)
+    {
+        playerLastActivity[playerID] = Time.time; // Update the last activity timestamp
+    }
+
+    //Deleting players
+    private void RemovePlayerCompletely(string playerID)
+    {
+        PlayerInfo playerToRemove = players.Find(player => player.playerID == playerID);
+
+        if (playerToRemove != null)
+        {
+            if (playerToRemove.playerGO != null)
+            {
+                Destroy(playerToRemove.playerGO);
+                Debug.Log($"Destroyed game object for player {playerToRemove.playerName} (ID: {playerID}).");
+            }
+
+            players.Remove(playerToRemove);
+            Debug.Log($"Player {playerToRemove.playerName} (ID: {playerID}) removed from the server.");
+
+            if (playerLastActivity.ContainsKey(playerID))
+            {
+                playerLastActivity.Remove(playerID);
+                Debug.Log($"Removed activity tracking for player {playerToRemove.playerName} (ID: {playerID}).");
+            }
+
+            BroadcastPlayerRemoval(playerID);
+        }
+        else
+        {
+            Debug.LogWarning($"Attempted to remove player with ID {playerID}, but they were not found.");
+        }
+    }
+
+    //Notifying other players about the removal
+    private void BroadcastPlayerRemoval(string playerID)
+    {
+        string message = $"PlayerRemoved:{playerID}";
+        byte[] data = Encoding.ASCII.GetBytes(message);
+
+        foreach (var player in players)
+        {
+            socket.SendTo(data, player.ip);
+        }
+
+        Debug.Log($"Notified all players about the removal of player with ID: {playerID}.");
     }
 }
