@@ -33,6 +33,9 @@ public class Server : MonoBehaviour
     private GameObject currentPlayer;
     private GameObject playerObject;
 
+    public GameObject LobbyTrigger;
+    public float activationRadius = 10f;
+
     private List<PlayerInfo> players;
 
     private bool instantiatePlayerFlag = false;
@@ -375,6 +378,43 @@ public class Server : MonoBehaviour
         else
         {
             Debug.LogError($"Invalid message format for PlayerNameUpdate: {message}");
+        }
+    }
+
+    //LobbyToMap
+    void CheckLobbyTriggerConditions()
+    {
+        List<PlayerInfo> playersInRange = new List<PlayerInfo>();
+
+        int totalPlayers = players.Count;
+
+        // Check if each player is within the radius of the LobbyTrigger
+        foreach (var player in players)
+        {
+            if (Vector3.Distance(player.playerGO.transform.position, LobbyTrigger.transform.position) <= activationRadius)
+            {
+                playersInRange.Add(player);
+            }
+        }
+
+        // Condition: Exactly 2 players are in range and all players must be inside the radius
+        if (playersInRange.Count >= 2 && playersInRange.Count == totalPlayers)
+        {
+            // Trigger the map change and notify all players
+            TriggerMapChange("FirstMap");
+        }
+    }
+    void TriggerMapChange(string mapName)
+    {
+        Debug.Log($"Triggering map change to {mapName}");
+
+        // Broadcast message to all players to change the map
+        string message = $"{mapName}";
+        byte[] data = Encoding.ASCII.GetBytes(message);
+
+        foreach (var player in players)
+        {
+            socket.SendTo(data, player.ip);  // Send the map change message to each player
         }
     }
 }

@@ -210,7 +210,8 @@ public class Client : MonoBehaviour
                         }
                         else if (message == "FirstMap")
                         {
-                            EnqueueMainThreadAction(() => mapToLoad = 1);
+                            //EnqueueMainThreadAction(() => mapToLoad = 1);
+                            Debug.Log("HEREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
                         }
                         else if (message.StartsWith("ID:"))
                         {
