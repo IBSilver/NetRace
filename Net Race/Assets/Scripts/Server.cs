@@ -29,9 +29,11 @@ public class Server : MonoBehaviour
 
     public GameObject prefabMap1;
     public GameObject prefabMap2;
+    public GameObject StartMap;
 
     private GameObject currentPlayer;
     private GameObject playerObject;
+    private GameObject currentMap;
 
     public GameObject LobbyTrigger;
     public float activationRadius = 8f;
@@ -423,15 +425,40 @@ public class Server : MonoBehaviour
     }
     void TriggerMapChange(string mapName)
     {
-        Debug.LogWarning($"Triggering map change to {mapName}");
-
         // Broadcast message to all players to change the map
         string message = $"{mapName}";
         byte[] data = Encoding.ASCII.GetBytes(message);
+        map = mapName;
 
         foreach (var player in players)
         {
             socket.SendTo(data, player.ip);  // Send the map change message to each player
+        }
+
+        if (mapName == "FirstMap")
+        {
+            //Set red Trigger to false
+            LobbyTrigger.SetActive(false);
+            // Destroy StartMap if it exists
+            if (StartMap != null)
+            {
+                Destroy(StartMap);
+                StartMap = null;
+                Debug.Log("StartMap GameObject destroyed.");
+            }
+
+            if (currentMap == null)
+            {
+                if (prefabMap2 != null)
+                {
+                    currentMap = Instantiate(prefabMap2, new Vector3(0, -16.5f, -86f), Quaternion.identity);
+                    Debug.Log("Instantiated prefabMap2.");
+                }
+                else
+                {
+                    Debug.LogError("prefabMap2 is not assigned in the inspector.");
+                }
+            }
         }
     }
 

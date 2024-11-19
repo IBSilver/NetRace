@@ -153,7 +153,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerPrefab: {fileID: 7250511751967764090, guid: 2443cdd96efe7bf49935d200671add45, type: 3}
   prefabMap1: {fileID: 6609255282665373359, guid: 5b2783d80fa21064daeead4ecfe22592, type: 3}
-  prefabMap2: {fileID: 5893006375727437392, guid: 816d5e85ef99f3644813937df0c0375b, type: 3}
+  prefabMap2: {fileID: 919132149155446097, guid: 3ba56702a0ef7ea479dfd06713a48bdd, type: 3}
+  StartMap: {fileID: 1757419634}
   LobbyTrigger: {fileID: 2058948325}
   activationRadius: 8
 --- !u!4 &260015299
@@ -265,6 +266,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!1 &1757419634 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6609255282665373359, guid: 5b2783d80fa21064daeead4ecfe22592, type: 3}
+  m_PrefabInstance: {fileID: 2004983346}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &2004983346
 PrefabInstance:
   m_ObjectHideFlags: 0

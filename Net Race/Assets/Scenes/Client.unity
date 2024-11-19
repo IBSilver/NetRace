@@ -152,7 +152,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   prefabMap1: {fileID: 6609255282665373359, guid: 8377cb1193a58b742be81fe8eb64e7ce, type: 3}
-  prefabMap2: {fileID: 5893006375727437392, guid: 816d5e85ef99f3644813937df0c0375b, type: 3}
+  prefabMap2: {fileID: 919132149155446097, guid: 3ba56702a0ef7ea479dfd06713a48bdd, type: 3}
   localPlayerPrefab: {fileID: 6607303442327822629, guid: 71cc4cdbee649284083174e6eb822fb2, type: 3}
   remotePlayerPrefab: {fileID: 7250511751967764090, guid: 2443cdd96efe7bf49935d200671add45, type: 3}
   playerNameUI: {fileID: 1865482048}
