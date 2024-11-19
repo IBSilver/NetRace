@@ -3,48 +3,50 @@ using UnityEngine;
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
-    // Variables de movimiento
-    public float speed = 5f;
-    public float jumpHeight = 2f;
-    public float gravity = -9.81f;
-    public float rotationSpeed = 10f; // Velocidad de rotación para suavizar el giro
+    public float speed = 5f; // Velocidad de movimiento
+    public float jumpHeight = 2f; // Altura del salto
+    public float gravity = -9.81f; // Gravedad
+    public float rotationSpeed = 10f; // Suavizado al rotar el jugador
 
-    // Variables internas
-    private Vector3 velocity;
-    private bool isGrounded;
-    private CharacterController controller;
+    private Vector3 velocity; // Velocidad vertical
+    private CharacterController controller; // Componente CharacterController
+    private Transform cameraTransform; // Transform de la cámara principal
+    private bool isGrounded; // Estado de contacto con el suelo
+    private float groundCheckOffset = 0.1f; // Offset para detección de suelo
 
     void Start()
     {
-        // Obtener el componente CharacterController
         controller = GetComponent<CharacterController>();
+        cameraTransform = Camera.main.transform; // Obtener la cámara principal
     }
 
     void Update()
     {
-        // Verificar si el jugador está en el suelo
+        // Verificar si está en el suelo usando la propiedad del CharacterController
         isGrounded = controller.isGrounded;
 
         if (isGrounded && velocity.y < 0)
         {
-            // Restablecer la velocidad de caída si estamos en el suelo
-            velocity.y = -2f;
+            velocity.y = -2f; // Mantener al jugador pegado al suelo
         }
 
-        // Movimiento horizontal (relativo a la cámara)
-        float horizontalInput = Input.GetAxis("Horizontal");
-        float verticalInput = Input.GetAxis("Vertical");
+        // Obtener entrada del jugador
+        float horizontal = Input.GetAxis("Horizontal");
+        float vertical = Input.GetAxis("Vertical");
 
-        // Crear un vector de movimiento en relación con el mundo (eje global)
-        Vector3 move = new Vector3(horizontalInput, 0, verticalInput).normalized;
+        // Calcular la dirección de movimiento relativa a la cámara
+        Vector3 move = Vector3.zero; // Inicializar el movimiento
 
-        // Mover al jugador (el tiempo delta asegura una velocidad constante en diferentes FPS)
-        controller.Move(move * speed * Time.deltaTime);
-
-        // Cambiar la rotación del personaje para que mire en la dirección del movimiento
-        if (move != Vector3.zero)
+        if (horizontal != 0 || vertical != 0)
         {
-            // Determinar la rotación objetivo
+            move = cameraTransform.right * horizontal + cameraTransform.forward * vertical;
+            move.y = 0; // Ignorar el eje Y
+            move = move.normalized; // Normalizar para evitar que diagonales sean más rápidas
+
+            // Mover al jugador
+            controller.Move(move * speed * Time.deltaTime);
+
+            // Rotar al jugador hacia la dirección de movimiento
             Quaternion targetRotation = Quaternion.LookRotation(move);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
         }
@@ -52,14 +54,30 @@ public class PlayerController : MonoBehaviour
         // Saltar
         if (Input.GetButtonDown("Jump") && isGrounded)
         {
-            // Calcular la velocidad de salto basada en la altura deseada
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
         }
 
         // Aplicar gravedad
         velocity.y += gravity * Time.deltaTime;
 
-        // Aplicar movimiento vertical (gravedad y salto)
+        // Aplicar movimiento vertical
         controller.Move(velocity * Time.deltaTime);
+
+        // Ajustar isGrounded manualmente para pendientes y superficies no perfectamente planas
+        if (!isGrounded && controller.velocity.magnitude < 0.1f)
+        {
+            Vector3 groundCheckPos = transform.position + Vector3.down * groundCheckOffset;
+            if (Physics.Raycast(groundCheckPos, Vector3.down, groundCheckOffset + 0.1f))
+            {
+                isGrounded = true;
+            }
+        }
+    }
+
+    // Visualización del rango de detección del suelo (opcional)
+    private void OnDrawGizmos()
+    {
+        Gizmos.color = Color.green;
+        Gizmos.DrawRay(transform.position + Vector3.down * groundCheckOffset, Vector3.down * 0.1f);
     }
 }
