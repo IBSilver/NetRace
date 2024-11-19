@@ -58,7 +58,7 @@ public class Server : MonoBehaviour
 
         Thread receiveThread = new Thread(Receive);
         receiveThread.Start();
-        InvokeRepeating(nameof(SendPositionAndRotation), 1, 0.1f);
+        InvokeRepeating(nameof(SendPositionAndRotation), 1, 0.016f);
         InvokeRepeating(nameof(CheckPlayerTimeouts), 1f, 1f);
     }
 
