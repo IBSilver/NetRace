@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using System.Text;
 using UnityEngine;
+using UnityEngine.UI;
 using System.Threading;
 using System.Collections.Generic;
 
@@ -25,6 +26,11 @@ public class Client : MonoBehaviour
 
     private List<PlayerInfo> players;
 
+    //UI
+    public GameObject playerNameUI;
+    public InputField playerNameInputField;
+    public Button confirmNameButton;
+
     private string playerID;
     private string playerName;
 
@@ -46,6 +52,8 @@ public class Client : MonoBehaviour
 
         Thread receiveThread = new Thread(Receive);
         receiveThread.Start();
+
+        confirmNameButton.onClick.AddListener(SetPlayerName);
 
         InvokeRepeating(nameof(CheckForServer), 1, 1);
         InvokeRepeating(nameof(SendMapRequest), 1, 5);
@@ -404,20 +412,25 @@ public class Client : MonoBehaviour
         }
     }
 
-    void RemovePlayer(string playerID)
+    //UI
+    public void SetPlayerName()
     {
-        lock (playersLock)
+        string newName = playerNameInputField.text;
+
+        if (!string.IsNullOrEmpty(newName))
         {
-            PlayerInfo playerToRemove = players.Find(player => player.playerID == playerID);
-            if (playerToRemove != null)
-            {
-                players.Remove(playerToRemove);
-                Debug.Log($"Player {playerToRemove.playerName} with ID {playerID} removed.");
-            }
-            else
-            {
-                Debug.LogWarning($"Player with ID {playerID} not found.");
-            }
+            playerName = newName;
+            Debug.Log($"Player name set to: {playerName}");
+
+            string message = $"PlayerNameUpdate:{playerID}:{playerName}";
+            byte[] data = Encoding.ASCII.GetBytes(message);
+            socket.SendTo(data, serverEndpoint);
+
+            playerNameUI.SetActive(false);
+        }
+        else
+        {
+            Debug.LogWarning("Player name is empty. Please enter a valid name.");
         }
     }
 }
