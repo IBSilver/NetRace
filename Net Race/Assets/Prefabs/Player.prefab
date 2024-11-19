@@ -105,7 +105,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8c8864b441a96c5498d60dc4e9bfcd2f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  player: {fileID: 9109908939018309704}
+  player: {fileID: 4502709931502705844}
+  rotationSpeed: 100
+  offset: {x: 0, y: 4, z: -8}
 --- !u!1 &6607303442327822629
 GameObject:
   m_ObjectHideFlags: 0

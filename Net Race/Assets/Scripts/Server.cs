@@ -34,7 +34,7 @@ public class Server : MonoBehaviour
     private GameObject playerObject;
 
     public GameObject LobbyTrigger;
-    public float activationRadius = 10f;
+    public float activationRadius = 8f;
 
     private List<PlayerInfo> players;
 
@@ -43,6 +43,7 @@ public class Server : MonoBehaviour
 
     //Had to use this to solve an error with the Instatiate in a thread different from the main
     private Queue<(string playerID, Vector3 newPosition, Quaternion newRotation)> positionUpdateQueue = new Queue<(string, Vector3, Quaternion)>();
+    private Queue<string> playerActivityQueue = new Queue<string>();
 
     private IPEndPoint ipAux = null;
 
@@ -63,11 +64,14 @@ public class Server : MonoBehaviour
         receiveThread.Start();
         InvokeRepeating(nameof(SendPositionAndRotation), 1, 0.016f);
         InvokeRepeating(nameof(CheckPlayerTimeouts), 1f, 1f);
+        InvokeRepeating(nameof(CheckLobbyTriggerConditions), 1f, 2f);
+
+        InvokeRepeating(nameof(SendNames), 1f, 10f);
     }
 
     void Update()
     {
-        // Process position updates from the queue
+        // Process position updates
         while (positionUpdateQueue.Count > 0)
         {
             var update = positionUpdateQueue.Dequeue();
@@ -89,19 +93,30 @@ public class Server : MonoBehaviour
                     Debug.Log($"Updated player {player.playerName} (ID: {playerID}) to position {newPosition} and rotation {newRotation.eulerAngles}");
                 }
             }
-            else
+            //else
+            //{
+            //    Debug.LogWarning($"Player with ID {playerID} not found for position update.");
+            //}
+        }
+
+        // Process player activity updates
+        lock (playerActivityQueue)
+        {
+            while (playerActivityQueue.Count > 0)
             {
-                Debug.LogWarning($"Player with ID {playerID} not found for position update.");
+                string playerID = playerActivityQueue.Dequeue();
+                playerLastActivity[playerID] = Time.time; // Update the last activity timestamp safely on the main thread
             }
         }
 
-        // If the flag is set, instantiate the player and reset the flag
+        // Handle instantiating player objects
         if (instantiatePlayerFlag)
         {
             HandlePlayerInfo(playerInfoMessage);
             instantiatePlayerFlag = false; // Reset the flag
         }
     }
+
     void Receive()
     {
         byte[] data = new byte[1024];
@@ -296,9 +311,11 @@ public class Server : MonoBehaviour
 
     public void UpdatePlayerActivity(string playerID)
     {
-        playerLastActivity[playerID] = Time.time; // Update the last activity timestamp
+        lock (playerActivityQueue)
+        {
+            playerActivityQueue.Enqueue(playerID); // Queue the update for the main thread
+        }
     }
-
     //Deleting players
     private void RemovePlayerCompletely(string playerID)
     {
@@ -406,7 +423,7 @@ public class Server : MonoBehaviour
     }
     void TriggerMapChange(string mapName)
     {
-        Debug.Log($"Triggering map change to {mapName}");
+        Debug.LogWarning($"Triggering map change to {mapName}");
 
         // Broadcast message to all players to change the map
         string message = $"{mapName}";
@@ -415,6 +432,18 @@ public class Server : MonoBehaviour
         foreach (var player in players)
         {
             socket.SendTo(data, player.ip);  // Send the map change message to each player
+        }
+    }
+
+    //Send all names to all clients
+    void SendNames()
+    {
+        foreach (var player in players)
+        {
+            string playerID = player.playerID;
+            string playerName = player.playerName;
+            string namesMessage = $"PlayerNameUpdate:{playerID}:{playerName}";
+            ChangePlayerName(namesMessage);
         }
     }
 }
