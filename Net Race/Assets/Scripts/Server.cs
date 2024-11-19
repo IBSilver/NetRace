@@ -136,6 +136,10 @@ public class Server : MonoBehaviour
                 {
                     ParsePositionWithID(message);
                 }
+                else if (message.StartsWith("PlayerNameUpdate:"))
+                {
+                    ChangePlayerName(message);
+                }
             }
             catch (SocketException ex)
             {
@@ -334,5 +338,43 @@ public class Server : MonoBehaviour
         }
 
         Debug.Log($"Notified all players about the removal of player with ID: {playerID}.");
+    }
+
+    //Change player name in server and broadcast it to all clients
+    private void ChangePlayerName(string message)
+    {
+        string[] parts = message.Split(':');
+        if (parts.Length == 3)
+        {
+            string playerID = parts[1];
+            string newPlayerName = parts[2];
+
+            PlayerInfo player = players.Find(p => p.playerID == playerID);
+
+            if (player != null)
+            {
+                player.playerName = newPlayerName;
+
+                Debug.Log($"Player name for {playerID} updated to {newPlayerName}");
+
+                // Notify all players about the name change
+                string nameUpdateMessage = $"PlayerNameUpdate:{playerID}:{newPlayerName}";
+                byte[] data = Encoding.ASCII.GetBytes(nameUpdateMessage);
+
+                // Broadcast the updated name to all players
+                foreach (var p in players)
+                {
+                    socket.SendTo(data, p.ip);
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"Player with ID {playerID} not found for name change.");
+            }
+        }
+        else
+        {
+            Debug.LogError($"Invalid message format for PlayerNameUpdate: {message}");
+        }
     }
 }
