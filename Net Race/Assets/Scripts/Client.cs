@@ -86,6 +86,9 @@ public class Client : MonoBehaviour
             mapLoaded = true;
             mapToLoad = null; // Reset after loading
         }
+
+        //Check if a player has fallen to teleport him/her back
+        CheckPlayerAltitude();
     }
     //Function used to avoid error when Instantiating prefab not in the main thread
     void EnqueueMainThreadAction(System.Action action)
@@ -522,5 +525,34 @@ public class Client : MonoBehaviour
         }
 
         SetPlayerName();
+    }
+
+    //Was a huge headache, could teleport the player back because of the CharacterController problem, took hours to determine the cause
+    void CheckPlayerAltitude()
+    {
+        if (instantiatedPrefab != null)
+        {
+            Transform playerGOTransform = instantiatedPrefab.transform.Find("PlayerGO");
+
+            if (playerGOTransform != null && playerGOTransform.transform.position.y < -100)
+            {
+                CharacterController charController = playerGOTransform.GetComponent<CharacterController>();
+
+                if (charController != null)
+                {
+                    charController.enabled = false;
+
+                    playerGOTransform.position = new Vector3(0, 1, -23);
+
+
+                    charController.enabled = true;
+                }
+                else
+                {
+                    playerGOTransform.position = new Vector3(0, 1, -23);
+                    Debug.Log($"PlayerGO moved to: {playerGOTransform.position}");
+                }
+            }
+        }
     }
 }
