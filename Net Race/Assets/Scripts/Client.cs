@@ -4,6 +4,7 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Threading;
+using System.Collections;
 using System.Collections.Generic;
 
 public class Client : MonoBehaviour
@@ -33,6 +34,7 @@ public class Client : MonoBehaviour
     //UI
     public GameObject playerNameUI;
     public InputField playerNameInputField;
+    public InputField serverIPInputField;
     public Button confirmNameButton;
 
     private string playerID;
@@ -53,14 +55,14 @@ public class Client : MonoBehaviour
         players = new List<PlayerInfo>();
         playerID = GenerateRandomPlayerID();
         playerName = GenerateRandomPlayerName();
-        serverEndpoint = new IPEndPoint(IPAddress.Parse("10.0.2.24"), 9050);
+
         socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         socket.ReceiveTimeout = 1000;
 
         Thread receiveThread = new Thread(Receive);
         receiveThread.Start();
 
-        confirmNameButton.onClick.AddListener(SetPlayerName);
+        confirmNameButton.onClick.AddListener(SetServerIPAndName);
 
         InvokeRepeating(nameof(CheckForServer), 1, 1);
         InvokeRepeating(nameof(SendMapRequest), 1, 5);
@@ -395,6 +397,12 @@ public class Client : MonoBehaviour
     }
     void CheckForServer()
     {
+        if (serverEndpoint == null)
+        {
+            Debug.LogWarning("Server IP not set. Skipping server check.");
+            return;
+        }
+
         try
         {
             if (!serverConnected)
@@ -414,7 +422,6 @@ public class Client : MonoBehaviour
             }
         }
     }
-
     void ReceiveResponse()
     {
         byte[] data = new byte[1024];
@@ -493,5 +500,27 @@ public class Client : MonoBehaviour
         {
             Debug.LogWarning("Player name is empty. Please enter a valid name.");
         }
+    }
+
+    public void SetServerIPAndName()
+    {
+        string newIP = serverIPInputField.text;
+
+        if (IPAddress.TryParse(newIP, out IPAddress ipAddress))
+        {
+            serverEndpoint = new IPEndPoint(ipAddress, 9050);
+            Debug.Log($"Server IP set to: {serverEndpoint.Address}");
+            StartCoroutine(WaitForServerAndSetName());
+        }
+    }
+
+    private IEnumerator WaitForServerAndSetName()
+    {
+        while (!serverConnected)
+        {
+            yield return new WaitForSeconds(0.5f);
+        }
+
+        SetPlayerName();
     }
 }
