@@ -24,6 +24,10 @@ public class Client : MonoBehaviour
 
     private GameObject instantiatedPrefab;
 
+    //Maps, made this way so they can be deleted easily
+    private GameObject map1;
+    private GameObject map2;
+
     private List<PlayerInfo> players;
 
     //UI
@@ -33,6 +37,7 @@ public class Client : MonoBehaviour
 
     private string playerID;
     private string playerName;
+    private string map = "Lobby";
 
     private readonly object playersLock = new object();
 
@@ -43,6 +48,8 @@ public class Client : MonoBehaviour
 
     void Start()
     {
+        prefabMap2.transform.position = new Vector3(0, -16.5f, -67f);
+        prefabMap2.transform.rotation = Quaternion.Euler(0, 0, 0);
         players = new List<PlayerInfo>();
         playerID = GenerateRandomPlayerID();
         playerName = GenerateRandomPlayerName();
@@ -207,10 +214,12 @@ public class Client : MonoBehaviour
                         else if (message == "Lobby")
                         {
                             EnqueueMainThreadAction(() => mapToLoad = 0);
+                            map = message;
                         }
                         else if (message == "FirstMap")
                         {
-                            EnqueueMainThreadAction(() => mapToLoad = 0);
+                            EnqueueMainThreadAction(() => mapToLoad = 1);
+                            map = message;
                         }
                         else if (message.StartsWith("ID:"))
                         {
@@ -429,22 +438,29 @@ public class Client : MonoBehaviour
 
     void InstantiateMap(int mapId)
     {
-        switch (mapId)
+        if (mapId == 0)
         {
-            case 0:
-                if (prefabMap1 != null)
-                {
-                    Instantiate(prefabMap1);
-                    Destroy(prefabMap2);
-                }
-                break;
-            case 1:
-                if (prefabMap2 != null)
-                {
-                    Instantiate(prefabMap2);
-                    Destroy(prefabMap1); 
-                }
-                break;
+            if (map1 == null)
+            {
+                map1 = Instantiate(prefabMap1);
+            }
+            if (map2 != null)
+            {
+                Destroy(map2);
+                map2 = null; 
+            }
+        }
+        else if (mapId == 1)
+        {
+            if (map2 == null)
+            {
+                map2 = Instantiate(prefabMap2);
+            }
+            if (map1 != null)
+            {
+                Destroy(map1);
+                map1 = null;
+            }
         }
     }
     void AddPlayer(string playerID, GameObject playerGO, string playerName)

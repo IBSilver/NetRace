@@ -3,7 +3,7 @@ using UnityEngine;
 public class FollowPlayer : MonoBehaviour
 {
     public Transform player; // Transform del jugador
-    public float rotationSpeed = 100f; // Velocidad de rotación de la cámara
+    public float rotationSpeed = 500f; // Velocidad de rotación de la cámara
     public Vector3 offset = new Vector3(0, 4, -8); // Offset inicial de la cámara
 
     private float xRot; // Rotación horizontal de la cámara

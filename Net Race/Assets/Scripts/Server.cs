@@ -403,24 +403,27 @@ public class Server : MonoBehaviour
     //LobbyToMap
     void CheckLobbyTriggerConditions()
     {
-        List<PlayerInfo> playersInRange = new List<PlayerInfo>();
-
-        int totalPlayers = players.Count;
-
-        // Check if each player is within the radius of the LobbyTrigger
-        foreach (var player in players)
+        if (map == "Lobby")
         {
-            if (Vector3.Distance(player.playerGO.transform.position, LobbyTrigger.transform.position) <= activationRadius)
+            List<PlayerInfo> playersInRange = new List<PlayerInfo>();
+
+            int totalPlayers = players.Count;
+
+            // Check if each player is within the radius of the LobbyTrigger
+            foreach (var player in players)
             {
-                playersInRange.Add(player);
+                if (Vector3.Distance(player.playerGO.transform.position, LobbyTrigger.transform.position) <= activationRadius)
+                {
+                    playersInRange.Add(player);
+                }
             }
-        }
 
-        // Condition: Exactly 2 players are in range and all players must be inside the radius
-        if (playersInRange.Count >= 2 && playersInRange.Count == totalPlayers)
-        {
-            // Trigger the map change and notify all players
-            TriggerMapChange("FirstMap");
+            // Condition: Exactly 2 players are in range and all players must be inside the radius
+            if (playersInRange.Count >= 2 && playersInRange.Count == totalPlayers)
+            {
+                // Trigger the map change and notify all players
+                TriggerMapChange("FirstMap");
+            }
         }
     }
     void TriggerMapChange(string mapName)
