@@ -125,7 +125,7 @@ public class Client : MonoBehaviour
         Vector3 position = player.transform.position;
         Quaternion rotation = player.transform.rotation;
 
-        string message = $"ID:{playerID} Position:{position.x}.{position.y}.{position.z} Rotation:{rotation.eulerAngles.x}.{rotation.eulerAngles.y}.{rotation.eulerAngles.z}";
+        string message = $"ID:{playerID} P:{position.x}.{position.y}.{position.z} R:{rotation.eulerAngles.x}.{rotation.eulerAngles.y}.{rotation.eulerAngles.z}";
 
         byte[] data = Encoding.ASCII.GetBytes(message);
         socket.SendTo(data, serverEndpoint);
@@ -133,7 +133,7 @@ public class Client : MonoBehaviour
     }
     private string GenerateRandomPlayerID()
     {
-        return $"Player_{Random.Range(1000, 99999)}";
+        return $"{Random.Range(1000, 99999)}";
     }
     private string GenerateRandomPlayerName()
     {
@@ -336,7 +336,7 @@ public class Client : MonoBehaviour
             if (idPart == playerID)
                 return;
 
-            string positionString = parts[1].Replace("Position:", "");
+            string positionString = parts[1].Replace("P:", "");
             string[] positionValues = positionString.Split('.');
             if (positionValues.Length == 3 &&
                 float.TryParse(positionValues[0], out float x) &&
@@ -345,7 +345,7 @@ public class Client : MonoBehaviour
             {
                 Vector3 newPosition = new Vector3(x, y, z);
 
-                string rotationString = parts[2].Replace("Rotation:", "");
+                string rotationString = parts[2].Replace("R:", "");
                 string[] rotationValues = rotationString.Split('.');
                 if (rotationValues.Length == 3 &&
                     float.TryParse(rotationValues[0], out float rotX) &&
@@ -509,7 +509,7 @@ public class Client : MonoBehaviour
         if (IPAddress.TryParse(newIP, out IPAddress ipAddress))
         {
             serverEndpoint = new IPEndPoint(ipAddress, 9050);
-            Debug.Log($"Server IP set to: {serverEndpoint.Address}");
+            confirmNameButton.interactable = false;
             StartCoroutine(WaitForServerAndSetName());
         }
     }
