@@ -53,7 +53,7 @@ public class Client : MonoBehaviour
         players = new List<PlayerInfo>();
         playerID = GenerateRandomPlayerID();
         playerName = GenerateRandomPlayerName();
-        serverEndpoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 9050);
+        serverEndpoint = new IPEndPoint(IPAddress.Parse("192.168.56.1"), 9050);
         socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         socket.ReceiveTimeout = 1000;
 
