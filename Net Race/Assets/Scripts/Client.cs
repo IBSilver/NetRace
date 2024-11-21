@@ -66,7 +66,7 @@ public class Client : MonoBehaviour
 
         InvokeRepeating(nameof(CheckForServer), 1, 1);
         InvokeRepeating(nameof(SendMapRequest), 1, 5);
-        InvokeRepeating(nameof(SendPositionAndRotation), 1, 0.016f);
+        InvokeRepeating(nameof(SendPositionAndRotation), 1, 0.033f);
         InvokeRepeating(nameof(SendPlayerInfo), 2f, 1);
     }
 
