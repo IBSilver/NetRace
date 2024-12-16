@@ -50,7 +50,7 @@ public class Client : MonoBehaviour
 
     void Start()
     {
-        prefabMap2.transform.position = new Vector3(0, -16.5f, -67f);
+        prefabMap2.transform.position = new Vector3(0, 8f, -67f);
         prefabMap2.transform.rotation = Quaternion.Euler(0, 0, 0);
         players = new List<PlayerInfo>();
         playerID = GenerateRandomPlayerID();
