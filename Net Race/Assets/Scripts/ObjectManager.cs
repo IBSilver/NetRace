@@ -71,7 +71,7 @@ public class ObjectManager : MonoBehaviour
 
                 Vector3 startPosition = platformStartPositions[platform.platformObject];
                 float offset = Mathf.Sin(Time.time * platformMoveSpeed) * platformMoveDistance * direction;
-                platform.platformObject.transform.position = startPosition + new Vector3(offset, 0, 0);
+                platform.platformObject.transform.position = startPosition + new Vector3(0, 0, offset);
             }
         }
     }
