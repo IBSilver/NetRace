@@ -243,6 +243,10 @@ public class Client : MonoBehaviour
                         {
                             ChangePlayerName(message);
                         }
+                        else if (message.StartsWith("T:"))
+                        {
+                            Debug.LogWarning(message);
+                        }
                     }
                 }
                 catch (SocketException ex)

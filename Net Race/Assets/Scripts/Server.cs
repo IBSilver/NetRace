@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using UnityEngine;
@@ -458,9 +459,24 @@ public class Server : MonoBehaviour
                     Debug.LogError("prefabMap2 is not assigned in the inspector.");
                 }
             }
+            // Send synchronized time after 5 seconds
+            Invoke(nameof(SendSynchronizedTime), 5f);
         }
     }
 
+    void SendSynchronizedTime()
+    {
+        DateTime serverTime = DateTime.Now.AddSeconds(3);
+
+        string timeMessage = $"T:{serverTime:HH:mm:ss}";
+        byte[] data = Encoding.ASCII.GetBytes(timeMessage);
+
+
+        foreach (var player in players)
+        {
+            socket.SendTo(data, player.ip);
+        }
+    }
     //Send all names to all clients
     void SendNames()
     {
