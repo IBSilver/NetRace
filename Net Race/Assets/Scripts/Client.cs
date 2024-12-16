@@ -41,6 +41,13 @@ public class Client : MonoBehaviour
     private string playerName;
     private string map = "Lobby";
 
+    //Checkpoints
+    public GameObject checkpoint1;
+    public GameObject checkpoint2;
+    public GameObject checkpoint3;
+    private Transform playerTransform;
+    private Vector3 currentCheckpointPosition;
+
     private readonly object playersLock = new object();
 
     //Used to avoid error when Instantiating prefab not in the main thread
@@ -80,6 +87,7 @@ public class Client : MonoBehaviour
         if (spawnOnMainThread && instantiatedPrefab == null && mapLoaded == true)
         {
             instantiatedPrefab = Instantiate(localPlayerPrefab, new Vector3(0, 1, 0), Quaternion.identity);
+            playerTransform = instantiatedPrefab.transform.Find("PlayerGO");
             spawnOnMainThread = false;
         }
 
@@ -90,9 +98,62 @@ public class Client : MonoBehaviour
             mapToLoad = null; // Reset after loading
         }
 
-        //Check if a player has fallen to teleport him/her back
+        //Check if a player has fallen to trigger the teleport
         CheckPlayerAltitude();
+
+        CheckForCheckpointTriggers();
+
+        if (playerTransform != null)
+        {
+            if (playerTransform.position.y < -60f && currentCheckpointPosition != null)
+            {
+                TeleportToCheckpoint(currentCheckpointPosition);
+            }
+        }
     }
+
+    void CheckForCheckpointTriggers()
+    {
+        if (checkpoint1 != null && Vector3.Distance(playerTransform.position, checkpoint1.transform.position) < 5f)
+        {
+            HandleCheckpointTrigger(checkpoint1.transform.position);
+        }
+
+        if (checkpoint2 != null && Vector3.Distance(playerTransform.position, checkpoint2.transform.position) < 5f)
+        {
+            HandleCheckpointTrigger(checkpoint2.transform.position);
+        }
+
+        if (checkpoint3 != null && Vector3.Distance(playerTransform.position, checkpoint3.transform.position) < 5f)
+        {
+            HandleCheckpointTrigger(checkpoint3.transform.position);
+        }
+    }
+
+    void HandleCheckpointTrigger(Vector3 checkpointPosition)
+    {
+        if (checkpointPosition != currentCheckpointPosition)
+        {
+            currentCheckpointPosition = checkpointPosition;
+        }
+    }
+
+    void TeleportToCheckpoint(Vector3 checkpointPosition)
+    {
+        CharacterController controller = playerTransform.GetComponent<CharacterController>();
+        if (controller != null)
+        {
+            controller.enabled = false;
+        }
+
+        playerTransform.position = checkpointPosition;
+
+        if (controller != null)
+        {
+            controller.enabled = true;
+        }
+    }
+
     //Function used to avoid error when Instantiating prefab not in the main thread
     void EnqueueMainThreadAction(System.Action action)
     {
