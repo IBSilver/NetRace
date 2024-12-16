@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -26,6 +27,8 @@ public class ObjectManager : MonoBehaviour
     public float platformMoveSpeed = 2.0f;
     public float platformMoveDistance = 5.0f;
 
+    private bool startAux = false;
+
     private Dictionary<GameObject, Vector3> platformStartPositions;
 
     void Start()
@@ -43,10 +46,47 @@ public class ObjectManager : MonoBehaviour
 
     void Update()
     {
-        MoveHammers();
-        MovePlatforms();
+        if (IsTimeToStart() || startAux == true)
+        {
+            startAux = true;
+            MoveHammers();
+            MovePlatforms();
+        }
     }
 
+    bool IsTimeToStart()
+    {
+        if (string.IsNullOrEmpty(Client.obstacleTime))
+        {
+            return false;
+        }
+
+        DateTime targetTime = ParseObstacleTime(Client.obstacleTime);
+
+        DateTime currentTime = DateTime.Now;
+
+        return currentTime.Hour == targetTime.Hour && currentTime.Minute == targetTime.Minute && currentTime.Second == targetTime.Second;
+    }
+
+    DateTime ParseObstacleTime(string timeString)
+    {
+        string[] timeParts = timeString.Split(':');
+
+        if (timeParts.Length == 4)
+        {
+            DateTime currentDate = DateTime.Now;
+
+            int hours = int.Parse(timeParts[1]);
+            int minutes = int.Parse(timeParts[2]);
+            int seconds = int.Parse(timeParts[3]);
+
+            return new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, hours, minutes, seconds);
+        }
+        else
+        {
+            throw new ArgumentException("Invalid time format.");
+        }
+    }
     void MoveHammers()
     {
         foreach (var hammer in hammers)

@@ -48,6 +48,9 @@ public class Client : MonoBehaviour
 
     private readonly object actionsLock = new object();
 
+    //To syncronize obstacles in all clients
+    public static string obstacleTime;
+
     void Start()
     {
         prefabMap2.transform.position = new Vector3(0, 8f, -67f);
@@ -245,7 +248,7 @@ public class Client : MonoBehaviour
                         }
                         else if (message.StartsWith("T:"))
                         {
-                            Debug.LogWarning(message);
+                            obstacleTime = message;
                         }
                     }
                 }

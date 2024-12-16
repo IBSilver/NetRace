@@ -459,14 +459,14 @@ public class Server : MonoBehaviour
                     Debug.LogError("prefabMap2 is not assigned in the inspector.");
                 }
             }
-            // Send synchronized time after 5 seconds
-            Invoke(nameof(SendSynchronizedTime), 5f);
+            // Send synchronized time after 1 second
+            Invoke(nameof(SendSynchronizedTime), 1f);
         }
     }
 
     void SendSynchronizedTime()
     {
-        DateTime serverTime = DateTime.Now.AddSeconds(3);
+        DateTime serverTime = DateTime.Now.AddSeconds(1);
 
         string timeMessage = $"T:{serverTime:HH:mm:ss}";
         byte[] data = Encoding.ASCII.GetBytes(timeMessage);
