@@ -10,6 +10,7 @@ public class PlayerInfo
 {
     public string playerID;
     public GameObject playerGO;
+    public Vector3 lastPos;
     public string playerName;
     public IPEndPoint ip;
 
@@ -18,6 +19,7 @@ public class PlayerInfo
         playerID = id;
         playerGO = go;
         playerName = name;
+        lastPos = go.transform.position;
     }
 }
 

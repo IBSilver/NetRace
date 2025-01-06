@@ -434,8 +434,15 @@ public class Client : MonoBehaviour
                             // Update position and rotation if the player already exists
                             if (existingPlayer.playerGO != null)
                             {
-                                existingPlayer.playerGO.transform.position = newPosition;
-                                existingPlayer.playerGO.transform.rotation = newRotation;
+                                if (existingPlayer.playerGO != null)
+                                {
+                                    // Smooth transition using Lerp between lastPos and newPosition
+                                    existingPlayer.playerGO.transform.position = Vector3.Lerp(existingPlayer.lastPos, newPosition, 0.5f);
+                                    existingPlayer.lastPos = newPosition;
+                                    existingPlayer.playerGO.transform.rotation = newRotation;
+
+                                    Debug.Log($"Updated player {existingPlayer.playerName} (ID: {idPart}) to position {newPosition} and rotation {newRotation.eulerAngles}");
+                                }
 
                                 Debug.Log($"Updated player {existingPlayer.playerName} (ID: {idPart}) to position {newPosition} and rotation {newRotation.eulerAngles}");
                             }
@@ -444,7 +451,10 @@ public class Client : MonoBehaviour
                         {
                             // Create a new player
                             GameObject newPlayerGO = Instantiate(remotePlayerPrefab, newPosition, newRotation);
-                            PlayerInfo newPlayer = new PlayerInfo(idPart, newPlayerGO, "RemotePlayer");
+                            PlayerInfo newPlayer = new PlayerInfo(idPart, newPlayerGO, "RemotePlayer")
+                            {
+                                lastPos = newPosition
+                            };
                             players.Add(newPlayer);
 
                             Debug.Log($"Instantiated new player with ID: {idPart}");
