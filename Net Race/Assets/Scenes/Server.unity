@@ -153,7 +153,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerPrefab: {fileID: 7250511751967764090, guid: 2443cdd96efe7bf49935d200671add45, type: 3}
   prefabMap1: {fileID: 6609255282665373359, guid: 5b2783d80fa21064daeead4ecfe22592, type: 3}
-  prefabMap2: {fileID: 4495375715272477628, guid: 70622de4de4ca1942a00e25ab972c21d, type: 3}
+  prefabMap2: {fileID: 1263202588949396390, guid: f710b77bf0d28614fbeb03e5e35522c1, type: 3}
   StartMap: {fileID: 1757419634}
   LobbyTrigger: {fileID: 2058948325}
   activationRadius: 8

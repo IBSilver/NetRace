@@ -18,8 +18,24 @@ public class ObjectManager : MonoBehaviour
         public bool startMovingRight = true;
     }
 
+    [System.Serializable]
+    public class RotatingHammer
+    {
+        public GameObject hammerObject;
+        public float rotationSpeed = 100.0f;
+    }
+
+    [System.Serializable]
+    public class Roller
+    {
+        public GameObject rollerObject;
+        public float rotationSpeed = 100.0f;
+    }
+
     public List<Hammer> hammers = new List<Hammer>();
     public List<Platform> platforms = new List<Platform>();
+    public List<RotatingHammer> rotatingHammers = new List<RotatingHammer>();
+    public List<Roller> rollers = new List<Roller>();
 
     public float hammerSwingSpeed = 1.0f;
     public float hammerSwingAngle = 45.0f;
@@ -51,6 +67,8 @@ public class ObjectManager : MonoBehaviour
             startAux = true;
             MoveHammers();
             MovePlatforms();
+            RotateHammers();
+            RotateRollers();
         }
     }
 
@@ -87,6 +105,7 @@ public class ObjectManager : MonoBehaviour
             throw new ArgumentException("Invalid time format.");
         }
     }
+
     void MoveHammers()
     {
         foreach (var hammer in hammers)
@@ -96,7 +115,7 @@ public class ObjectManager : MonoBehaviour
                 float direction = hammer.startMovingRight ? 1.0f : -1.0f;
 
                 float swingAngle = Mathf.Sin(Time.time * hammerSwingSpeed) * hammerSwingAngle * direction;
-                hammer.hammerObject.transform.localRotation = Quaternion.Euler(swingAngle, 0, 0);
+                hammer.hammerObject.transform.localRotation = Quaternion.Euler(swingAngle + 180, 90, 0);
             }
         }
     }
@@ -111,7 +130,29 @@ public class ObjectManager : MonoBehaviour
 
                 Vector3 startPosition = platformStartPositions[platform.platformObject];
                 float offset = Mathf.Sin(Time.time * platformMoveSpeed) * platformMoveDistance * direction;
-                platform.platformObject.transform.position = startPosition + new Vector3(0, 0, offset);
+                platform.platformObject.transform.position = startPosition + new Vector3(offset, 0, 0);
+            }
+        }
+    }
+
+    void RotateHammers()
+    {
+        foreach (var rotatingHammer in rotatingHammers)
+        {
+            if (rotatingHammer.hammerObject != null)
+            {
+                rotatingHammer.hammerObject.transform.Rotate(0, rotatingHammer.rotationSpeed * Time.deltaTime, 0, Space.Self);
+            }
+        }
+    }
+
+    void RotateRollers()
+    {
+        foreach (var roller in rollers)
+        {
+            if (roller.rollerObject != null)
+            {
+                roller.rollerObject.transform.Rotate(roller.rotationSpeed * Time.deltaTime, 0, 0, Space.Self);
             }
         }
     }
