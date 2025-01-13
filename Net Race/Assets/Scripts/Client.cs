@@ -620,14 +620,14 @@ public class Client : MonoBehaviour
                 {
                     charController.enabled = false;
 
-                    playerGOTransform.position = new Vector3(0, 1, -23);
+                    playerGOTransform.position = new Vector3(0, 1, 0);
 
 
                     charController.enabled = true;
                 }
                 else
                 {
-                    playerGOTransform.position = new Vector3(0, 1, -23);
+                    playerGOTransform.position = new Vector3(0, 1, 0);
                     Debug.Log($"PlayerGO moved to: {playerGOTransform.position}");
                 }
             }
